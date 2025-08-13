@@ -1,0 +1,116 @@
+<!-- profile.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile Page</title>
+  <link rel="stylesheet" href="/stylesheet/profile.css">
+  <link rel="stylesheet" href="/stylesheet/modal.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+</head>
+
+<body data-profile="<%= user.profile %>">
+  <!-- The Modal -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <!-- Modal Header -->
+      <header class="modal-header">
+        <span class="close">&times;</span>
+        <h2>
+          <%= user.username %>
+        </h2>
+      </header>
+
+      <!-- Modal Body -->
+      <main class="modal-body"></main>
+
+      <!-- Modal Footer -->
+      <footer class="modal-footer"></footer>
+    </div>
+  </div>
+
+
+  <!-- Navbar -->
+  <div class="navbar-top">
+    <div class="title">
+      <h1>Profile</h1>
+    </div>
+    <ul>
+      <li>
+        <a href="#message">
+          <i class="fa fa-envelope fa-2x"></i>
+        </a>
+      </li>
+      <li>
+        <a href="#notification">
+          <i class="fa fa-bell fa-2x"></i>
+        </a>
+      </li>
+      <li class="back">
+        <a href="http://127.0.0.1:8000/shop">
+          <i class="fa fa-sign-out-alt fa-2x"></i>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <h2>IDENTITY</h2>
+    <div class="profile">
+      <img id="profile-image" src="/images/profiles/<%= user.profile %>" alt="Profile Image">
+      <i class="fa fa-pen fa-xs edit profile-edit" id="edit-image-btn" onclick="renderUpdateProfileImage()"></i>
+      <input type=" file" id="image-upload" multiple accept="image/*" style="display: none;">
+    </div>
+
+    <div class="card">
+      <i class="fa fa-pen fa-xs edit card-edit" id="edit-table-btn"></i>
+      <div class="card-body">
+        <table id="profile-table">
+          <tbody>
+            <tr>
+              <td>FirstName:</td>
+              <td class="editable" data-field="firstname">
+                <%= user.firstname %>
+              </td>
+            </tr>
+            <tr>
+              <td>LastName:</td>
+              <td class="editable" data-field="lastname">
+                <%= user.lastname %>
+              </td>
+            </tr>
+            <tr>
+              <td>Username:</td>
+              <td class="editable" data-field="username">
+                <%= user.username %>
+              </td>
+            </tr>
+            <tr>
+              <td>Address:</td>
+              <td class="editable" data-field="address">
+                <%= user.address %>
+              </td>
+            </tr>
+            <tr>
+              <td>Phonenumber:</td>
+              <td class="editable" data-field="phoneNumber">
+                <%= user.phonenumber %>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script src="/javascript/modal.js"></script>
+  <script src="/javascript/profile.js"></script>
+</body>
+
+</html>

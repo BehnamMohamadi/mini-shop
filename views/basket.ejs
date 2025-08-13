@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fa">
+
+<head>
+  <meta charset="UTF-8">
+  <title>سبد خرید</title>
+  <link rel="stylesheet" href="/stylesheet/shop.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+  <h1>سبد خرید شما</h1>
+  <div id="basket-container"></div>
+  <div id="basket-total">جمع کل: ۰ تومان</div>
+  <script>
+    const basketContainer = document.getElementById("basket-container");
+    const basketTotal = document.getElementById("basket-total");
+
+    const cart = JSON.parse(localStorage.getItem("cart") || "{}");
+
+    fetch("http://127.0.0.1:8000/api/products")
+      .then((res) => res.json())
+      .then((data) => {
+        const products = data.data.products;
+        let total = 0;
+
+        Object.keys(cart).forEach(productId => {
+          const product = products.find(p => p._id === productId);
+          if (!product) return;
+
+          const quantity = cart[productId];
+          const itemTotal = product.price * quantity;
+          total += itemTotal;
+
+          const item = document.createElement("div");
+          item.classList.add("basket-item");
+          item.innerHTML = `
+            <h3>${product.name}</h3>
+            <p>تعداد: ${quantity}</p>
+            <p>قیمت واحد: ${product.price.toLocaleString()} تومان</p>
+            <p>جمع: ${itemTotal.toLocaleString()} تومان</p>
+            <hr>
+          `;
+          basketContainer.appendChild(item);
+        });
+
+        basketTotal.textContent = `جمع کل: ${total.toLocaleString()} تومان`;
+      });
+  </script>
+</body>
+
+</html>

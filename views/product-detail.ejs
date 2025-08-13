@@ -1,0 +1,41 @@
+<!-- views/product-detail.ejs -->
+<!DOCTYPE html>
+<html lang="fa">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>
+    <%= product.name %>
+  </title>
+  <link rel="stylesheet" href="/css/product-detail.css" />
+</head>
+
+<body>
+  <div class="product-detail">
+    <img src="/images/profiles/models-images/product-images/<%= product.thumbnail %>" alt="<%= product.name %>"
+      onerror="this.onerror=null; this.src='/images/profiles/models-images/product-images/default-thumbnail.jpeg';" />
+    <h1>
+      <%= product.name %>
+    </h1>
+    <p class="description">
+      <%= product.description %>
+    </p>
+    <p class="price">
+      <%= product.price.toLocaleString() %> تومان
+    </p>
+    <button class="buy-btn" onclick="addToCart('<%= product._id %>')">خرید</button>
+  </div>
+
+  <script>
+    function addToCart(productId) {
+      const cart = JSON.parse(localStorage.getItem("cart") || "{}");
+      cart[productId] = (cart[productId] || 0) + 1;
+      localStorage.setItem("cart", JSON.stringify(cart));
+      alert("به سبد خرید اضافه شد");
+    }
+  </script>
+</body>
+
+
+
+</html>

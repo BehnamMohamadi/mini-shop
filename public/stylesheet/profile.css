@@ -1,0 +1,212 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #e8f5ff;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* Navbar Top */
+.navbar-top {
+  background-color: #fff;
+  color: #333;
+  box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.1);
+  height: 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 50px;
+}
+
+.title {
+  font-family: 'Dancing Script', cursive;
+  font-size: 24px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.navbar-top ul {
+  display: flex;
+  list-style: none;
+  gap: 20px;
+}
+
+.navbar-top ul li a {
+  color: #333;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.navbar-top ul li a:hover {
+  color: #007bff;
+}
+
+/* Profile Section */
+.main {
+  margin: 2% auto;
+  width: 58%;
+  font-size: 28px;
+  padding: 0 10px;
+}
+
+.main h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.profile {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 30px;
+}
+
+.profile img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.1);
+  object-fit: cover;
+}
+
+.profile-edit {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: white;
+  padding: 5px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0px 0px 3px 0px rgba(0, 0, 0, 0.2);
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.profile-edit:hover {
+  color: #007bff;
+  transform: scale(1.1);
+}
+
+/* Card Section */
+.card {
+  background-color: #fff;
+  border-radius: 18px;
+  box-shadow: 1px 1px 8px 0 rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.card-edit {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.card-edit:hover {
+  color: #007bff;
+  transform: scale(1.1);
+}
+
+.card-body {
+  padding: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table tr {
+  border-bottom: 1px solid #eee;
+}
+
+table tr:last-child {
+  border-bottom: none;
+}
+
+table td {
+  padding: 12px 0;
+  vertical-align: top;
+}
+
+table td:first-child {
+  font-weight: bold;
+  width: 150px;
+  color: #555;
+}
+
+table td:last-child {
+  color: #333;
+}
+
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #f1f1f1;
+}
+
+.save-btn {
+  background: #007bff;
+  color: white;
+}
