@@ -1,19 +1,17 @@
 <!-- shop.ejs -->
 <!DOCTYPE html>
-<html>
+<html lang="fa">
 
 <head>
-  <title>shop</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فروشگاه فلان</title>
   <link href="https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="/stylesheet/shop.css" />
-  <link rel="stylesheet" href="/stylesheet/modal.css" />
-  <link rel="stylesheet" href="/stylesheet/basket.css" />
-  <meta charset="UTF-8" />
 </head>
 
 <body>
-
-
+  <!-- Header -->
   <header>
     <div class="right-side-header">
       <h1>فروشگاه فلان</h1>
@@ -23,25 +21,26 @@
         <% if (user && user.role==='admin' ) { %>
           <a href="/admin">مدیریت</a>
           <% } %>
-
-            <div id="cart-modal" class="cart-modal hidden">
-              <div class="cart-header">
-                <h3>سبد خرید</h3>
-                <span id="close-cart">✖</span>
-              </div>
-              <div id="cart-items"></div>
-              <div id="cart-total">جمع: ۰ تومان</div>
-              <a href="http://127.0.0.1:8000/api/basket " class="checkout-btn">نهایی کردن خرید</a>
-            </div>
-
-            <div class="cart-wrapper">
-              <div class="cart-icon" id="cart-icon">🛒</div>
-            </div>
       </nav>
+
+      <!-- Cart Modal -->
+      <div id="cart-modal" class="cart-modal hidden">
+        <div class="cart-header">
+          <h3>سبد خرید</h3>
+          <span id="close-cart">✖</span>
+        </div>
+        <div id="cart-items"></div>
+        <div id="cart-total"></div>
+      </div>
+
+      <!-- Cart Icon -->
+      <div class="cart-wrapper">
+        <div class="cart-icon" id="cart-icon">🛒</div>
+      </div>
     </div>
   </header>
 
-
+  <!-- Main Content -->
   <main class="container">
     <div id="product-container"></div>
   </main>
@@ -50,8 +49,8 @@
   <div class="sidebar">
     <div class="logo_content">
       <div class="logo">
-        <div class="logo_icon"></div>
-        <div class="logo_name">shop</div>
+        <i class="bx bx-store"></i>
+        <div class="logo_name">فروشگاه</div>
       </div>
       <i class="bx bx-menu" id="btn"></i>
     </div>
@@ -59,56 +58,56 @@
     <ul class="nav_list">
       <li>
         <i class="bx bx-search"></i>
-        <input placeholder="Search..." />
-        <span class="tooltip">Search</span>
+        <input placeholder="جستجو..." />
+        <span class="tooltip">جستجو</span>
       </li>
 
       <li>
-        <a href="#" class="user-profile-link" onclick="renderUpdateUser('<%= user._id %>')">
-          <i class=" bx bx-user" id="user-icon"></i>
-          <span class="links_name">User</span>
+        <a href="#" class="user-profile-link">
+          <i class="bx bx-user" id="user-icon"></i>
+          <span class="links_name">کاربر</span>
         </a>
-        <span class="tooltip">User</span>
+        <span class="tooltip">کاربر</span>
       </li>
 
       <li>
         <a href="#">
           <i class="bx bx-grid-alt"></i>
-          <span class="links_name">division</span>
+          <span class="links_name">دسته‌بندی</span>
         </a>
-        <span class="tooltip">division</span>
+        <span class="tooltip">دسته‌بندی</span>
       </li>
 
       <li>
         <a href="#">
           <i class="bx bx-cart-alt"></i>
-          <span class="links_name">Order</span>
+          <span class="links_name">سفارشات</span>
         </a>
-        <span class="tooltip">Order</span>
+        <span class="tooltip">سفارشات</span>
       </li>
 
       <li>
         <a href="#">
-          <i class="bx bx-heart" </i>
-            <span class="links_name">Saved</span>
+          <i class="bx bx-heart"></i>
+          <span class="links_name">علاقه‌مندی‌ها</span>
         </a>
-        <span class="tooltip">Saved</span>
+        <span class="tooltip">علاقه‌مندی‌ها</span>
       </li>
 
       <li>
         <a href="#">
           <i class="bx bx-pie-chart-alt-2"></i>
-          <span class="links_name">orders</span>
+          <span class="links_name">آمار</span>
         </a>
-        <span class="tooltip">orders</span>
+        <span class="tooltip">آمار</span>
       </li>
 
       <li>
         <a href="#">
           <i class="bx bx-cog"></i>
-          <span class="links_name">Settings</span>
+          <span class="links_name">تنظیمات</span>
         </a>
-        <span class="tooltip">Settings</span>
+        <span class="tooltip">تنظیمات</span>
       </li>
     </ul>
 
@@ -118,18 +117,17 @@
           <li>
             <a href="#">
               <i class="bx bx-log-out" id="log_out-btn"></i>
-              <span class="links_name">Logout</span>
+              <span class="links_name">خروج</span>
             </a>
-            <span class="tooltip">Logout</span>
+            <span class="tooltip">خروج</span>
           </li>
         </ul>
       </div>
     </div>
   </div>
 
-
+  <!-- Scripts -->
   <script type="module" src="/javascript/shop.js"></script>
-
 </body>
 
 </html>

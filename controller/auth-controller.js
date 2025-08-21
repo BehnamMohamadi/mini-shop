@@ -1,4 +1,4 @@
-//auth-controller.js
+//auth-controller.js - Fixed Version
 const User = require("../models/user-model");
 const { AppError } = require("../utils/app-error");
 const jwt = require("jsonwebtoken");
@@ -82,33 +82,41 @@ const protect = async (req, res, next) => {
 
   let token = null;
 
+  // Check for token in cookies first (preferred for browser requests)
   if (!!req.cookies.jwt) {
     token = req.cookies.jwt;
   } else if (!!authorization && authorization?.startsWith("Bearer")) {
     token = req.headers.authorization.split(" ").at(1);
   }
-  console.log(req.cookies.jwt);
+
+  console.log("Token found:", !!token);
+
   if (!token) {
     return next(new AppError(401, "you are not logged in"));
   }
 
-  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  try {
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  const currentUser = await User.findById(decoded.id).select(
-    "-password  -__v -createdAt -updatedAt"
-  );
-  if (!currentUser) {
-    return next(new AppError(401, "the user blong to this token not exist"));
-  }
-
-  if (currentUser.changedPasswordAfter(decoded.iat)) {
-    return next(
-      new AppError(401, "password has been changed please try to login atfirst")
+    const currentUser = await User.findById(decoded.id).select(
+      "-password  -__v -createdAt -updatedAt"
     );
-  }
-  req.user = currentUser;
+    if (!currentUser) {
+      return next(new AppError(401, "the user belong to this token does not exist"));
+    }
 
-  next();
+    if (currentUser.changedPasswordAfter(decoded.iat)) {
+      return next(
+        new AppError(401, "password has been changed please try to login at first")
+      );
+    }
+
+    req.user = currentUser;
+    next();
+  } catch (error) {
+    console.error("JWT verification error:", error);
+    return next(new AppError(401, "Invalid token"));
+  }
 };
 
 const restrictTo = (...roles) => {
@@ -127,35 +135,41 @@ const restrictTo = (...roles) => {
 const isLoggedIn = async (req, res, next) => {
   if (!req.cookies.jwt) return next();
 
-  const token = req.cookies.jwt;
+  try {
+    const token = req.cookies.jwt;
 
-  const { id: userId } = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+    const { id: userId } = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-  const user = await User.findById(userId);
+    const user = await User.findById(userId);
 
-  if (!user) {
-    return res.status(401).json({
-      status: "fail",
-      data: { message: "the user blonging to this token does no longer exists" },
-    });
+    if (!user) {
+      return res.status(401).json({
+        status: "fail",
+        data: { message: "the user belonging to this token does no longer exist" },
+      });
+    }
+
+    res.locals.user = user;
+    next();
+  } catch (error) {
+    console.error("isLoggedIn error:", error);
+    return next();
   }
-
-  res.locals.user = user;
-  next();
 };
 
 const logout = (req, res, next) => {
   const { authorization = null } = req.headers;
 
+  //delete token
   if (!req.cookies.jwt) {
-    return next(new AppError(400, "you were logged in "));
+    return next(new AppError(400, "you were not logged in "));
   }
 
   res.clearCookie("jwt", {
     httpOnly: true,
     sameSite: "lax",
   });
-  res.status(204).json({ status: "success", data: null });
+  res.status(200).json({ status: "success", data: null });
 };
 
 module.exports = {

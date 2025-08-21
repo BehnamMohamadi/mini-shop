@@ -1,51 +1,624 @@
+<!-- views/basket.ejs -->
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 
 <head>
   <meta charset="UTF-8">
-  <title>سبد خرید</title>
-  <link rel="stylesheet" href="/stylesheet/shop.css">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سبد خرید - فروشگاه فلان</title>
+  <link href="https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/stylesheet/shop.css" />
+  <style>
+    .basket-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .basket-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .basket-content {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 30px;
+    }
+
+    .basket-items {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .basket-summary {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+
+    .basket-item {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      transition: background-color 0.3s;
+    }
+
+    .basket-item:hover {
+      background: #f8f9fa;
+    }
+
+    .basket-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-image {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-left: 20px;
+    }
+
+    .item-details {
+      flex: 1;
+    }
+
+    .item-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .item-brand {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .item-price {
+      font-size: 16px;
+      color: #4CAF50;
+      font-weight: 600;
+    }
+
+    .item-controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 15px;
+    }
+
+    .quantity-controls-basket {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f1f3f4;
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .quantity-btn-basket {
+      background: white;
+      border: 1px solid #ddd;
+      width: 35px;
+      height: 35px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .quantity-btn-basket:hover {
+      background: #e9ecef;
+    }
+
+    .quantity-display-basket {
+      min-width: 40px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .item-total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .remove-item {
+      background: #f44336;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background-color 0.3s;
+    }
+
+    .remove-item:hover {
+      background: #d32f2f;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      font-size: 16px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      padding: 20px 0;
+      font-size: 24px;
+      font-weight: bold;
+      color: #4CAF50;
+      border-top: 2px solid #4CAF50;
+      margin-top: 20px;
+    }
+
+    .checkout-button {
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      border: none;
+      padding: 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: 600;
+      width: 100%;
+      margin-top: 20px;
+      transition: all 0.3s;
+    }
+
+    .checkout-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+    }
+
+    .checkout-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .continue-shopping {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 20px;
+      transition: background-color 0.3s;
+    }
+
+    .continue-shopping:hover {
+      background: #1976D2;
+    }
+
+    .empty-basket {
+      text-align: center;
+      padding: 100px 20px;
+      color: #666;
+    }
+
+    .empty-basket-icon {
+      font-size: 6rem;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    .loading-basket {
+      text-align: center;
+      padding: 100px 20px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    @media (max-width: 768px) {
+      .basket-content {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .basket-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+      }
+
+      .item-controls {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <h1>سبد خرید شما</h1>
-  <div id="basket-container"></div>
-  <div id="basket-total">جمع کل: ۰ تومان</div>
+  <div class="basket-container">
+    <div class="basket-header">
+      <h1><i class='bx bx-cart'></i> سبد خرید شما</h1>
+      <p>مرور و تکمیل سفارش</p>
+    </div>
+
+    <button onclick="goBackToShop()" class="continue-shopping">
+      <i class='bx bx-arrow-back'></i> ادامه خرید
+    </button>
+
+    <div id="basket-content" class="loading-basket">
+      در حال بارگذاری سبد خرید...
+    </div>
+  </div>
+
   <script>
-    const basketContainer = document.getElementById("basket-container");
-    const basketTotal = document.getElementById("basket-total");
+    let currentBasket = {};
+    let products = [];
 
-    const cart = JSON.parse(localStorage.getItem("cart") || "{}");
+    async function loadBasketPage() {
+      try {
+        // Load products first
+        const productsResponse = await fetch('/api/products');
+        const productsData = await productsResponse.json();
+        products = productsData.data.products;
 
-    fetch("http://127.0.0.1:8000/api/products")
-      .then((res) => res.json())
-      .then((data) => {
-        const products = data.data.products;
-        let total = 0;
+        // Load basket
+        await loadBasket();
+        renderBasketPage();
+      } catch (error) {
+        console.error('Error loading basket page:', error);
+        document.getElementById('basket-content').innerHTML = `
+                    <div class="empty-basket">
+                        <div class="empty-basket-icon">❌</div>
+                        <h2>خطا در بارگذاری</h2>
+                        <p>لطفا صفحه را مجددا بارگذاری کنید</p>
+                        <button onclick="window.location.reload()" class="continue-shopping">تلاش مجدد</button>
+                    </div>
+                `;
+      }
+    }
 
-        Object.keys(cart).forEach(productId => {
-          const product = products.find(p => p._id === productId);
-          if (!product) return;
-
-          const quantity = cart[productId];
-          const itemTotal = product.price * quantity;
-          total += itemTotal;
-
-          const item = document.createElement("div");
-          item.classList.add("basket-item");
-          item.innerHTML = `
-            <h3>${product.name}</h3>
-            <p>تعداد: ${quantity}</p>
-            <p>قیمت واحد: ${product.price.toLocaleString()} تومان</p>
-            <p>جمع: ${itemTotal.toLocaleString()} تومان</p>
-            <hr>
-          `;
-          basketContainer.appendChild(item);
+    async function loadBasket() {
+      try {
+        // Try to get from server first
+        const response = await fetch('/api/basket', {
+          method: 'GET',
+          credentials: 'include'
         });
 
-        basketTotal.textContent = `جمع کل: ${total.toLocaleString()} تومان`;
-      });
+        if (response.ok) {
+          const data = await response.json();
+          currentBasket = transformServerBasket(data.data.basket);
+        } else {
+          // Fallback to localStorage
+          currentBasket = getLocalBasket();
+        }
+      } catch (error) {
+        console.error('Error loading basket:', error);
+        currentBasket = getLocalBasket();
+      }
+    }
+
+    function transformServerBasket(serverBasket) {
+      const localBasket = {};
+      if (serverBasket && serverBasket.items && Array.isArray(serverBasket.items)) {
+        serverBasket.items.forEach(item => {
+          if (item.product && item.product._id) {
+            localBasket[item.product._id] = item.quantity;
+          }
+        });
+      }
+      return localBasket;
+    }
+
+    function getLocalBasket() {
+      try {
+        const basket = localStorage.getItem('tempBasket');
+        return basket ? JSON.parse(basket) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function setLocalBasket(basket) {
+      try {
+        localStorage.setItem('tempBasket', JSON.stringify(basket));
+      } catch (error) {
+        console.error('Error saving local basket:', error);
+      }
+    }
+
+    function renderBasketPage() {
+      const basketItems = Object.keys(currentBasket);
+
+      if (basketItems.length === 0) {
+        document.getElementById('basket-content').innerHTML = `
+                    <div class="empty-basket">
+                        <div class="empty-basket-icon">🛒</div>
+                        <h2>سبد خرید شما خالی است</h2>
+                        <p>محصولاتی را به سبد خرید خود اضافه کنید</p>
+                        <button onclick="goBackToShop()" class="continue-shopping">شروع خرید</button>
+                    </div>
+                `;
+        return;
+      }
+
+      let totalAmount = 0;
+      let totalItems = 0;
+
+      const itemsHtml = basketItems.map(productId => {
+        const quantity = currentBasket[productId];
+        const product = products.find(p => p._id === productId);
+
+        if (!product || quantity <= 0) return '';
+
+        const itemTotal = product.price * quantity;
+        totalAmount += itemTotal;
+        totalItems += quantity;
+
+        const imagePath = `/images/models-images/product-images/${product.thumbnail}`;
+
+        return `
+                    <div class="basket-item" data-product-id="${productId}">
+                        <img src="${imagePath}" 
+                             alt="${product.name}" 
+                             class="item-image"
+                             onerror="this.src='/images/models-images/product-images/default-thumbnail.jpeg'" />
+                        
+                        <div class="item-details">
+                            <div class="item-name">${product.name}</div>
+                            <div class="item-brand">برند: ${product.brand}</div>
+                            <div class="item-price">${product.price.toLocaleString()} تومان</div>
+                        </div>
+                        
+                        <div class="item-controls">
+                            <div class="quantity-controls-basket">
+                                <button onclick="updateQuantity('${productId}', ${quantity - 1})" class="quantity-btn-basket">-</button>
+                                <span class="quantity-display-basket">${quantity}</span>
+                                <button onclick="updateQuantity('${productId}', ${quantity + 1})" class="quantity-btn-basket">+</button>
+                            </div>
+                            <div class="item-total">${itemTotal.toLocaleString()} تومان</div>
+                            <button onclick="removeItem('${productId}')" class="remove-item">
+                                <i class='bx bx-trash'></i> حذف
+                            </button>
+                        </div>
+                    </div>
+                `;
+      }).join('');
+
+      document.getElementById('basket-content').innerHTML = `
+                <div class="basket-content">
+                    <div class="basket-items">
+                        <h2>محصولات سبد خرید (${totalItems} کالا)</h2>
+                        ${itemsHtml}
+                    </div>
+                    
+                    <div class="basket-summary">
+                        <h3>خلاصه سفارش</h3>
+                        
+                        <div class="summary-row">
+                            <span>تعداد کالا:</span>
+                            <span>${totalItems} عدد</span>
+                        </div>
+                        
+                        <div class="summary-row">
+                            <span>مبلغ کل:</span>
+                            <span>${totalAmount.toLocaleString()} تومان</span>
+                        </div>
+                        
+                        <div class="summary-row">
+                            <span>هزینه ارسال:</span>
+                            <span>رایگان</span>
+                        </div>
+                        
+                        <div class="summary-total">
+                            <span>قابل پرداخت:</span>
+                            <span>${totalAmount.toLocaleString()} تومان</span>
+                        </div>
+                        
+                        <button onclick="proceedToPayment()" class="checkout-button">
+                            <i class='bx bx-credit-card'></i>
+                            ادامه و پرداخت
+                        </button>
+                        
+                        <button onclick="clearBasket()" style="background: #f44336; margin-top: 15px;" class="checkout-button">
+                            <i class='bx bx-trash'></i>
+                            پاک کردن سبد
+                        </button>
+                    </div>
+                </div>
+            `;
+    }
+
+    async function updateQuantity(productId, newQuantity) {
+      try {
+        if (newQuantity <= 0) {
+          await removeItem(productId);
+          return;
+        }
+
+        // Update on server if authenticated
+        try {
+          const response = await fetch(`/api/basket/item/${productId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ quantity: newQuantity })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            currentBasket = transformServerBasket(data.data.basket);
+          } else {
+            throw new Error('Server update failed');
+          }
+        } catch (error) {
+          // Update localStorage as fallback
+          currentBasket[productId] = newQuantity;
+        }
+
+        setLocalBasket(currentBasket);
+        renderBasketPage();
+
+      } catch (error) {
+        console.error('Error updating quantity:', error);
+        showNotification('خطا در به‌روزرسانی', 'error');
+      }
+    }
+
+    async function removeItem(productId) {
+      try {
+        // Remove from server if authenticated
+        try {
+          const response = await fetch(`/api/basket/item/${productId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            currentBasket = transformServerBasket(data.data.basket);
+          } else {
+            throw new Error('Server remove failed');
+          }
+        } catch (error) {
+          // Remove from localStorage as fallback
+          delete currentBasket[productId];
+        }
+
+        setLocalBasket(currentBasket);
+        renderBasketPage();
+        showNotification('محصول حذف شد', 'success');
+
+      } catch (error) {
+        console.error('Error removing item:', error);
+        showNotification('خطا در حذف محصول', 'error');
+      }
+    }
+
+    async function clearBasket() {
+      if (confirm('آیا از پاک کردن تمام محصولات اطمینان دارید؟')) {
+        try {
+          // Clear server basket
+          try {
+            await fetch('/api/basket', {
+              method: 'DELETE',
+              credentials: 'include'
+            });
+          } catch (error) {
+            console.log('Server clear failed, clearing local only');
+          }
+
+          // Clear local basket
+          currentBasket = {};
+          setLocalBasket(currentBasket);
+          renderBasketPage();
+          showNotification('سبد خرید پاک شد', 'success');
+
+        } catch (error) {
+          console.error('Error clearing basket:', error);
+          showNotification('خطا در پاک کردن سبد', 'error');
+        }
+      }
+    }
+
+    function proceedToPayment() {
+      const totalItems = Object.values(currentBasket).reduce((sum, qty) => sum + qty, 0);
+
+      if (totalItems === 0) {
+        showNotification('سبد خرید شما خالی است', 'warning');
+        return;
+      }
+
+      // Here you would typically redirect to payment gateway
+      // For now, we'll show a success message
+      showNotification('در حال انتقال به درگاه پرداخت...', 'info');
+
+      // Simulate payment process
+      setTimeout(() => {
+        if (confirm('آیا می‌خواهید سفارش خود را تکمیل کنید؟')) {
+          // Clear basket after successful order
+          clearBasket();
+          showNotification('سفارش شما با موفقیت ثبت شد!', 'success');
+
+          // Redirect to shop after 3 seconds
+          setTimeout(() => {
+            goBackToShop();
+          }, 3000);
+        }
+      }, 1000);
+    }
+
+    function goBackToShop() {
+      window.location.href = '/shop';
+    }
+
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.textContent = message;
+      notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 10000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                background: ${type === 'success' ? '#4CAF50' :
+          type === 'error' ? '#f44336' :
+            type === 'warning' ? '#ff9800' :
+              '#2196F3'
+        };
+            `;
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+      }, 100);
+
+      setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
+    }
+
+    // Load basket page on DOM ready
+    document.addEventListener('DOMContentLoaded', loadBasketPage);
   </script>
 </body>
 

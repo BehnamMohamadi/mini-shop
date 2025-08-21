@@ -8,7 +8,8 @@ const {
   loginValidationSchema,
 } = require("../validation/auth-validator");
 
-router.post("/signup", validator(signupValidationSchema), asyncHandler(signup));
+// router.post("/signup", validator(signupValidationSchema), asyncHandler(signup));
+router.post("/signup", asyncHandler(signup));
 router.post("/login", validator(loginValidationSchema), asyncHandler(login));
 router.get("/logout", logout);
 

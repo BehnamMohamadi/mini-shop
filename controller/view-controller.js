@@ -43,6 +43,15 @@ const renderBasketPage = async (req, res, next) => {
   res.render(path.join(__dirname, "../views/basket.ejs"), { user: req.user });
 };
 
+const renderProductDetailPage = async (req, res, next) => {
+  const { productId } = req.params;
+
+  res.render(path.join(__dirname, "../views/product-detail.ejs"), {
+    productId,
+    user: res.locals.user,
+  });
+};
+
 module.exports = {
   renderLoginPage,
   renderShopPage,
@@ -52,4 +61,5 @@ module.exports = {
   renderProductLandingPage,
   renderSingleProductPage,
   renderBasketPage,
+  renderProductDetailPage,
 };

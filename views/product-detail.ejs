@@ -1,41 +1,331 @@
 <!-- views/product-detail.ejs -->
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 
 <head>
-  <meta charset="UTF-8" />
-  <title>
-    <%= product.name %>
-  </title>
-  <link rel="stylesheet" href="/css/product-detail.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جزئیات محصول - فروشگاه فلان</title>
+  <link href="https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/stylesheet/shop.css" />
+  <style>
+    .product-detail-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+
+    .product-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 30px;
+    }
+
+    .product-images {
+      position: relative;
+    }
+
+    .main-image {
+      width: 100%;
+      height: 400px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+
+    .product-info-detail {
+      padding: 20px 0;
+    }
+
+    .product-title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .product-brand-detail {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
+    .product-price-detail {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4CAF50;
+      margin-bottom: 20px;
+    }
+
+    .product-stock-detail {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+
+    .product-description-detail {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #555;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+
+    .product-actions-detail {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .quantity-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f1f3f4;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .quantity-input {
+      width: 60px;
+      text-align: center;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    .add-to-cart-detail {
+      background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .add-to-cart-detail:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+    }
+
+    .back-to-shop {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .loading-detail {
+      text-align: center;
+      padding: 100px 20px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    @media (max-width: 768px) {
+      .product-detail-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .product-actions-detail {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .add-to-cart-detail {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <div class="product-detail">
-    <img src="/images/profiles/models-images/product-images/<%= product.thumbnail %>" alt="<%= product.name %>"
-      onerror="this.onerror=null; this.src='/images/profiles/models-images/product-images/default-thumbnail.jpeg';" />
-    <h1>
-      <%= product.name %>
-    </h1>
-    <p class="description">
-      <%= product.description %>
-    </p>
-    <p class="price">
-      <%= product.price.toLocaleString() %> تومان
-    </p>
-    <button class="buy-btn" onclick="addToCart('<%= product._id %>')">خرید</button>
+  <div class="product-detail-container">
+    <button onclick="goBackToShop()" class="back-to-shop">
+      <i class='bx bx-arrow-back'></i> بازگشت به فروشگاه
+    </button>
+
+    <div id="product-detail-content" class="loading-detail">
+      در حال بارگذاری...
+    </div>
   </div>
 
   <script>
-    function addToCart(productId) {
-      const cart = JSON.parse(localStorage.getItem("cart") || "{}");
-      cart[productId] = (cart[productId] || 0) + 1;
-      localStorage.setItem("cart", JSON.stringify(cart));
-      alert("به سبد خرید اضافه شد");
+    const productId = '<%= productId %>';
+
+    async function loadProductDetail() {
+      try {
+        const response = await fetch(`/api/products/${productId}`);
+        if (!response.ok) {
+          throw new Error('Product not found');
+        }
+
+        const data = await response.json();
+        const product = data.data;
+
+        renderProductDetail(product);
+      } catch (error) {
+        console.error('Error loading product:', error);
+        document.getElementById('product-detail-content').innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #f44336;">
+                        <h2>محصول یافت نشد</h2>
+                        <p>متأسفانه محصول مورد نظر شما یافت نشد.</p>
+                        <button onclick="goBackToShop()" class="back-to-shop">بازگشت به فروشگاه</button>
+                    </div>
+                `;
+      }
     }
+
+    function renderProductDetail(product) {
+      const imagePath = `/images/models-images/product-images/${product.thumbnail}`;
+
+      document.getElementById('product-detail-content').innerHTML = `
+                <div class="product-detail-grid">
+                    <div class="product-images">
+                        <img src="${imagePath}" 
+                             alt="${product.name}" 
+                             class="main-image"
+                             onerror="this.src='/images/models-images/product-images/default-thumbnail.jpeg'" />
+                    </div>
+                    
+                    <div class="product-info-detail">
+                        <h1 class="product-title">${product.name}</h1>
+                        <div class="product-brand-detail">برند: ${product.brand}</div>
+                        <div class="product-price-detail">${product.price.toLocaleString()} تومان</div>
+                        <div class="product-stock-detail">
+                            <i class='bx bx-package'></i>
+                            موجودی: ${product.quantity} عدد
+                        </div>
+                        
+                        <div class="product-actions-detail">
+                            <div class="quantity-selector">
+                                <label>تعداد:</label>
+                                <button onclick="changeQuantityDetail(-1)" class="quantity-btn">-</button>
+                                <input type="number" id="quantity-input" value="1" min="1" max="${product.quantity}" class="quantity-input">
+                                <button onclick="changeQuantityDetail(1)" class="quantity-btn">+</button>
+                            </div>
+                            <button onclick="addToCartFromDetail()" class="add-to-cart-detail">
+                                <i class='bx bx-cart-add'></i>
+                                افزودن به سبد خرید
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-description-detail">
+                    <h3>توضیحات محصول</h3>
+                    <p>${product.description || 'توضیحاتی برای این محصول ارائه نشده است.'}</p>
+                </div>
+            `;
+    }
+
+    function changeQuantityDetail(delta) {
+      const input = document.getElementById('quantity-input');
+      const currentValue = parseInt(input.value) || 1;
+      const newValue = Math.max(1, Math.min(input.max, currentValue + delta));
+      input.value = newValue;
+    }
+
+    async function addToCartFromDetail() {
+      const quantity = parseInt(document.getElementById('quantity-input').value) || 1;
+
+      try {
+        // Add to basket using the same method as shop page
+        const basket = JSON.parse(localStorage.getItem('tempBasket') || '{}');
+        basket[productId] = (basket[productId] || 0) + quantity;
+        localStorage.setItem('tempBasket', JSON.stringify(basket));
+
+        // Try to sync with server if user is authenticated
+        try {
+          const response = await fetch('/api/basket', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ productId, quantity })
+          });
+
+          if (response.ok) {
+            console.log('Product added to server basket');
+          }
+        } catch (error) {
+          console.log('Added to local basket only');
+        }
+
+        showNotification(`${quantity} عدد به سبد خرید اضافه شد`, 'success');
+
+        // Reset quantity input
+        document.getElementById('quantity-input').value = 1;
+
+      } catch (error) {
+        console.error('Error adding to cart:', error);
+        showNotification('خطا در افزودن به سبد خرید', 'error');
+      }
+    }
+
+    function goBackToShop() {
+      window.location.href = '/shop';
+    }
+
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.textContent = message;
+      notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 10000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+            `;
+
+      document.body.appendChild(notification);
+
+      setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+      }, 100);
+
+      setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 3000);
+    }
+
+    // Load product detail on page load
+    loadProductDetail();
   </script>
 </body>
-
-
 
 </html>

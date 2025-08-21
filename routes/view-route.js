@@ -9,6 +9,7 @@ const {
   renderProductLandingPage,
   renderSingleProductPage,
   renderBasketPage,
+  renderProductDetailPage,
 } = require("../controller/view-controller");
 
 const { isLoggedIn } = require("../controller/auth-controller");
@@ -27,5 +28,7 @@ router.get("/product-landing-page", asyncHandler(renderProductLandingPage));
 
 router.get("/product", isLoggedIn, renderSingleProductPage);
 router.get("/basket", isLoggedIn, renderBasketPage);
+
+router.get("/product/:productId", isLoggedIn, renderProductDetailPage);
 
 module.exports = router;

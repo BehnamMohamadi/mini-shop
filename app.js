@@ -9,6 +9,7 @@ const { addAdmin } = require("./utils/add-admin");
 const appRouter = require("./routes/app-route");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+const { globalErrorHandler } = require("./controller/error-handler-controller");
 
 // const { addCategoryAndSubCategory } = require("./utils/add-category-subCategory");
 
@@ -23,6 +24,13 @@ if (!!dotenvConfig.error) {
 
 const port = process.env.PORT;
 const host = process.env.HOST;
+
+//synchronous unhandled error(uncaught exception)
+process.on("uncaughtException", (err) => {
+  console.log(err.name, err.message);
+  console.log("server  shutting down");
+  process.exit(1);
+});
 
 const app = express();
 
@@ -47,15 +55,16 @@ app.all("*", (req, res, next) => {
   next(new AppError(404, `can't find ${method} ${originalUrl}`));
 });
 
-app.use((err, req, res, next) => {
-  console.log(err);
-  const { statusCode = 500, status = "error", message = "internal app error" } = err;
+app.use(globalErrorHandler);
 
-  console.log(err);
-
-  res.status(statusCode).json({ status, message });
+const server = app.listen(port, host, () => {
+  console.info(`[i] app is running on ${host}:${port} ...`);
 });
 
-app.listen(port, host, () => {
-  console.info(`[i] app is running on ${host}:${port} ...`);
+process.on("unhandledRejection", (err) => {
+  console.log(err.name, err.message);
+  console.log("server sgutting down");
+  server.close(() => {
+    process.exit(1);
+  });
 });

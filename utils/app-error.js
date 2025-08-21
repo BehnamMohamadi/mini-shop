@@ -1,3 +1,5 @@
+//utils/app-error.js
+
 function AppError(statusCode, errorMessage) {
   this.message = errorMessage;
   this.statusCode = statusCode;
