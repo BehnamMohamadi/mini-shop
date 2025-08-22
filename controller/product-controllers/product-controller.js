@@ -4,10 +4,32 @@ const Product = require("../../models/product-model");
 const Category = require("../../models/category-model");
 const SubCategory = require("../../models/subCategory-model");
 const { AppError } = require("../../utils/app-error");
+const { ApiFeatures } = require("../../utils/api-features");
 
 const getAllProducts = async (req, res, next) => {
-  const products = await Product.find().populate("category").populate("subCategory");
-  res.status(200).json({ status: "success", data: { products } });
+  const productModel = new ApiFeatures(Product.find({}), req.query)
+    .sort()
+    .filter()
+    .paginate()
+    .limitFields();
+
+  const products = await productModel.model
+    .populate("category", "name icon")
+    .populate("subCategory", "name icon");
+
+  const totalModels = new ApiFeatures(Product.find({}), req.query).filter();
+  const total = await totalModels.model;
+
+  const { page = 1, limit = 10 } = req.query;
+
+  res.status(200).json({
+    status: "success",
+    page: Number(page),
+    perpage: Number(limit),
+    total: total.length,
+    totalPages: Math.ceil(total.length / Number(limit)),
+    data: { products },
+  });
 };
 
 const getProductsGroupedByCategoryAndSubCategory = async (req, res, next) => {

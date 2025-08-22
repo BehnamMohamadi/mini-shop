@@ -6,32 +6,28 @@ const { join } = require("node:path");
 const { access, constants, unlink } = require("node:fs/promises");
 const sharp = require("sharp");
 const { multerUpload } = require("../utils/multer-config");
+const { ApiFeatures } = require("../utils/api-features");
 
 const getAllCategories = async (req, res, next) => {
-  const {
-    sort: sortBy = "name",
-    page = 1,
-    limit = 10,
-    fields = "-__v",
-    ...filter
-  } = req.query;
+  const categoryModel = new ApiFeatures(Category.find({}), req.query)
+    .sort()
+    .filter()
+    .paginate()
+    .limitFields();
 
-  const skip = (page * 1 - 1) * (limit * 1);
+  const categories = await categoryModel.model;
 
-  const filterAsJson = JSON.stringify(filter).replace(
-    /\b(gt|gte|lt|lte)\b/g,
-    (match) => `$${match}`
-  );
-  console.log(filterAsJson);
+  const totalModels = new ApiFeatures(Category.find({}), req.query).filter();
+  const total = await totalModels.model;
 
-  const categories = await Category.find(JSON.parse(filterAsJson))
-    .select(fields.split(",").join(" "))
-    .sort(sortBy)
-    .skip(skip)
-    .limit(limit * 1);
+  const { page = 1, limit = 10 } = req.query;
 
   res.status(200).json({
     status: "success",
+    page: Number(page),
+    perpage: Number(limit),
+    total: total.length,
+    totalPages: Math.ceil(total.length / Number(limit)),
     data: { categories },
   });
 };

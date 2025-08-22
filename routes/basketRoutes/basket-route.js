@@ -1,6 +1,6 @@
 // routes/basketRoutes/basket-route.js - Complete Updated File
 const router = require("express").Router();
-const { protect } = require("../../controller/auth-controller");
+const { protect, restrictTo } = require("../../controller/auth-controller");
 const { asyncHandler } = require("../../utils/async-handler");
 const {
   getBasket,
@@ -10,6 +10,7 @@ const {
   clearBasket,
   syncBasket,
   getBasketSummary,
+  getAllBaskets,
 } = require("../../controller/basket-controllers/basket-controller");
 
 // All basket routes require authentication
@@ -35,5 +36,7 @@ router.delete("/item/:productId", asyncHandler(removeFromBasket));
 
 // DELETE /api/basket - Clear entire basket
 router.delete("/", asyncHandler(clearBasket));
+
+router.get("/getAllBasket", restrictTo("admin"), asyncHandler(getAllBaskets));
 
 module.exports = router;

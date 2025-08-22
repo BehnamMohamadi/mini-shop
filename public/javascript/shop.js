@@ -1,4 +1,4 @@
-// shop.js - Show Stock Errors on Product Cards
+// shop.js - Updated for new basket schema (products/count instead of items/quantity)
 import {
   getProducts,
   groupProducts,
@@ -7,16 +7,16 @@ import {
   imageService,
 } from "./shop/shop-services.js";
 
-console.log("🚀 Shop.js with Product Card Error Display");
+console.log("Shop.js with updated basket schema support");
 
 // Global state
 let currentBasket = {};
 let groupedProducts = {};
 let allProducts = [];
 
-// FUNCTIONS WITH PRODUCT CARD ERROR DISPLAY
+// FUNCTIONS WITH UPDATED SCHEMA SUPPORT
 window.addToCart = async function (productId) {
-  console.log("🛒 ADD TO CART:", productId);
+  console.log("ADD TO CART:", productId);
 
   try {
     currentBasket = await basketService.addToBasket(productId, 1);
@@ -38,13 +38,14 @@ window.addToCart = async function (productId) {
 };
 
 window.changeQuantity = async function (productId, newQuantity) {
-  console.log("🔄 CHANGE QUANTITY:", productId, "to", newQuantity);
+  console.log("CHANGE QUANTITY:", productId, "to", newQuantity);
 
   if (newQuantity < 0) {
     newQuantity = 0;
   }
 
   try {
+    // Use updateQuantity method which handles count parameter correctly
     currentBasket = await basketService.updateQuantity(productId, newQuantity);
     console.log("Cart updated:", currentBasket);
 
@@ -73,7 +74,7 @@ window.changeQuantity = async function (productId, newQuantity) {
 };
 
 window.removeFromCart = async function (productId) {
-  console.log("🗑️ REMOVE FROM CART:", productId);
+  console.log("REMOVE FROM CART:", productId);
 
   try {
     currentBasket = await basketService.removeFromBasket(productId);
@@ -572,7 +573,7 @@ function showCategoryProducts(products) {
 
 // Initialize app
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Initializing shop with product card error display...");
+  console.log("Initializing shop with updated basket schema...");
 
   try {
     // Setup UI
@@ -610,10 +611,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load basket
     await loadBasket();
 
-    console.log("✅ Shop with product card errors initialized successfully");
+    console.log("Shop initialized successfully with updated basket schema");
     basketService.showNotification("فروشگاه بارگذاری شد", "success");
   } catch (error) {
-    console.error("❌ Error initializing shop:", error);
+    console.error("Error initializing shop:", error);
     basketService.showNotification("خطا در بارگذاری فروشگاه", "error");
   }
 });

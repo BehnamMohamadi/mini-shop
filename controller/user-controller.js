@@ -1,6 +1,7 @@
 //user-controler.js
 const User = require("../models/user-model");
 const { AppError } = require("../utils/app-error");
+const { ApiFeatures } = require("../utils/api-features");
 
 const getUserById = async (req, res, next) => {
   const { userId } = req.params;
@@ -17,12 +18,28 @@ const getUserById = async (req, res, next) => {
 };
 
 const getAllUsers = async (req, res, next) => {
-  const users = await User.find({}).select(
-    "_id firstname  lastname username role createdAt"
-  );
+  const userModel = new ApiFeatures(
+    User.find({}).select("_id firstname lastname username role createdAt"),
+    req.query
+  )
+    .sort()
+    .filter()
+    .paginate()
+    .limitFields();
+
+  const users = await userModel.model;
+
+  const totalModels = new ApiFeatures(User.find({}), req.query).filter();
+  const total = await totalModels.model;
+
+  const { page = 1, limit = 10 } = req.query;
 
   res.status(200).json({
     status: "success",
+    page: Number(page),
+    perpage: Number(limit),
+    total: total.length,
+    totalPages: Math.ceil(total.length / Number(limit)),
     data: { users },
   });
 };

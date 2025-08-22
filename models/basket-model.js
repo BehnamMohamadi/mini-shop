@@ -1,48 +1,46 @@
-// models/basket-model.js
-const mongoose = require("mongoose");
+// models/basket-model.js - Updated to match order schema pattern
+const { Schema, model } = require("mongoose");
 
-const basketItemSchema = new mongoose.Schema({
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Product",
-    required: [true, "Product ID is required"],
-  },
-  quantity: {
-    type: Number,
-    required: [true, "Quantity is required"],
-    min: [1, "Quantity must be at least 1"],
-    default: 1,
-  },
-  price: {
-    type: Number,
-    required: [true, "Price is required"],
-    min: [0, "Price cannot be negative"],
-  },
-  addedAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
-const basketSchema = new mongoose.Schema(
+const basketSchema = new Schema(
   {
     user: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User ID is required"],
       unique: true,
     },
-    items: [basketItemSchema],
-    totalAmount: {
+
+    products: [
+      {
+        product: {
+          type: Schema.Types.ObjectId,
+          ref: "Product",
+          required: [true, "Product ID is required"],
+        },
+        count: {
+          type: Number,
+          required: [true, "Product count is required"],
+          min: [1, "Count must be at least 1"],
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    totalPrice: {
       type: Number,
       default: 0,
-      min: [0, "Total amount cannot be negative"],
+      min: [0, "Total price cannot be negative"],
     },
+
     totalItems: {
       type: Number,
       default: 0,
       min: [0, "Total items cannot be negative"],
     },
+
     lastUpdated: {
       type: Date,
       default: Date.now,
@@ -53,29 +51,34 @@ const basketSchema = new mongoose.Schema(
   }
 );
 
-basketSchema.methods.calculateTotals = function () {
+// Pre-save hook to calculate totals
+basketSchema.pre("save", async function (next) {
+  let totalPrice = 0;
   let totalItems = 0;
-  let totalAmount = 0;
 
-  for (let item of this.items) {
-    totalItems += item.quantity;
-    totalAmount += item.price * item.quantity;
+  if (this.products.length > 0) {
+    const { products } = await this.populate("products.product", { price: 1 });
+
+    for (const { product, count } of products) {
+      if (product && product.price) {
+        totalPrice += product.price * count;
+        totalItems += count;
+      }
+    }
   }
 
+  this.totalPrice = totalPrice;
   this.totalItems = totalItems;
-  this.totalAmount = totalAmount;
   this.lastUpdated = new Date();
-};
 
-basketSchema.pre("save", function (next) {
-  this.calculateTotals();
   next();
 });
 
-basketSchema.methods.addItem = function (productId, quantity, price) {
+// Instance methods
+basketSchema.methods.addItem = async function (productId, count) {
   let existingItem = null;
 
-  for (let item of this.items) {
+  for (let item of this.products) {
     if (item.product.toString() === productId.toString()) {
       existingItem = item;
       break;
@@ -83,28 +86,26 @@ basketSchema.methods.addItem = function (productId, quantity, price) {
   }
 
   if (existingItem) {
-    existingItem.quantity += quantity;
-    existingItem.price = price;
+    existingItem.count += count;
   } else {
-    this.items.push({
+    this.products.push({
       product: productId,
-      quantity: quantity,
-      price: price,
+      count: count,
     });
   }
 
   return this.save();
 };
 
-basketSchema.methods.updateItemQuantity = function (productId, quantity) {
+basketSchema.methods.updateItemCount = async function (productId, count) {
   let itemFound = false;
 
-  for (let i = 0; i < this.items.length; i++) {
-    if (this.items[i].product.toString() === productId.toString()) {
-      if (quantity <= 0) {
-        this.items.splice(i, 1);
+  for (let i = 0; i < this.products.length; i++) {
+    if (this.products[i].product.toString() === productId.toString()) {
+      if (count <= 0) {
+        this.products.splice(i, 1);
       } else {
-        this.items[i].quantity = quantity;
+        this.products[i].count = count;
       }
       itemFound = true;
       break;
@@ -118,35 +119,36 @@ basketSchema.methods.updateItemQuantity = function (productId, quantity) {
   return this.save();
 };
 
-basketSchema.methods.removeItem = function (productId) {
-  const newItems = [];
+basketSchema.methods.removeItem = async function (productId) {
+  const newProducts = [];
 
-  for (let item of this.items) {
+  for (let item of this.products) {
     if (item.product.toString() !== productId.toString()) {
-      newItems.push(item);
+      newProducts.push(item);
     }
   }
 
-  this.items = newItems;
+  this.products = newProducts;
   return this.save();
 };
 
-basketSchema.methods.clearBasket = function () {
-  this.items = [];
+basketSchema.methods.clearBasket = async function () {
+  this.products = [];
   return this.save();
 };
 
+// Static methods
 basketSchema.statics.findOrCreateBasket = async function (userId) {
-  let basket = await this.findOne({ user: userId }).populate("items.product");
+  let basket = await this.findOne({ user: userId }).populate("products.product");
 
   if (!basket) {
-    basket = await this.create({ user: userId, items: [] });
-    basket = await this.findById(basket._id).populate("items.product");
+    basket = await this.create({ user: userId, products: [] });
+    basket = await this.findById(basket._id).populate("products.product");
   }
 
   return basket;
 };
 
-const Basket = mongoose.model("Basket", basketSchema);
+const Basket = model("Basket", basketSchema);
 
 module.exports = Basket;
