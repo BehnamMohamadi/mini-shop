@@ -1,42 +1,44 @@
-// routes/basketRoutes/basket-route.js - Complete Updated File
 const router = require("express").Router();
 const { protect, restrictTo } = require("../../controller/auth-controller");
 const { asyncHandler } = require("../../utils/async-handler");
+const { validator } = require("../../validation/validator");
+const {
+  addToBasketValidationSchema,
+  updateBasketItemValidationSchema,
+} = require("../../validation/basket-validator");
 const {
   getBasket,
   addToBasket,
   updateBasketItem,
   removeFromBasket,
   clearBasket,
-  syncBasket,
-  getBasketSummary,
   getAllBaskets,
+  getBasketSummary,
 } = require("../../controller/basket-controllers/basket-controller");
 
-// All basket routes require authentication
-router.use(asyncHandler(protect));
+router.get(
+  "/get-all-baskets",
+  asyncHandler(protect),
+  restrictTo("admin"),
+  asyncHandler(getAllBaskets)
+);
 
-// GET /api/basket - Get user's basket
+router.use(asyncHandler(protect), restrictTo("customer", "admin"));
+
 router.get("/", asyncHandler(getBasket));
 
-// GET /api/basket/summary - Get basket summary (faster endpoint)
 router.get("/summary", asyncHandler(getBasketSummary));
 
-// POST /api/basket - Add item to basket
-router.post("/", asyncHandler(addToBasket));
+router.post("/", validator(addToBasketValidationSchema), asyncHandler(addToBasket));
 
-// POST /api/basket/sync - Sync local basket with server basket
-router.post("/sync", asyncHandler(syncBasket));
+router.put(
+  "/item/:productId",
+  validator(updateBasketItemValidationSchema),
+  asyncHandler(updateBasketItem)
+);
 
-// PUT /api/basket/item/:productId - Update item quantity in basket
-router.put("/item/:productId", asyncHandler(updateBasketItem));
-
-// DELETE /api/basket/item/:productId - Remove item from basket
 router.delete("/item/:productId", asyncHandler(removeFromBasket));
 
-// DELETE /api/basket - Clear entire basket
 router.delete("/", asyncHandler(clearBasket));
-
-router.get("/getAllBasket", restrictTo("admin"), asyncHandler(getAllBaskets));
 
 module.exports = router;

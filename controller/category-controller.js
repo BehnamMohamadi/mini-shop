@@ -47,8 +47,6 @@ const getCategoryById = async (req, res, next) => {
 };
 
 const addCategory = async (req, res, next) => {
-  //add category icon in addCategory
-
   const { name } = req.body;
 
   const existing = await Category.findOne({ name });
@@ -68,7 +66,6 @@ const editCategoryById = async (req, res, next) => {
   const { categoryId } = req.params;
   const { name } = req.body;
 
-  //edit icon
   const category = await Category.findById(categoryId);
   if (!category) {
     return next(new AppError(404, `category (id: ${categoryId}) not found`));
@@ -145,7 +142,9 @@ const changeCategoryIcon = async (req, res, next) => {
     try {
       await access(previousPath, constants.F_OK);
       await unlink(previousPath);
-    } catch (err) {}
+    } catch (err) {
+      //error handler
+    }
   }
 
   category.icon = icon ?? category.icon;

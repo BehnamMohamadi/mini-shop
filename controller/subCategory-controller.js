@@ -74,8 +74,6 @@ const editSubCategoryById = async (req, res, next) => {
   const { subCategoryId } = req.params;
   let { name = null, category = null } = req.body;
 
-  //check is category exist??
-
   const subcategory = await SubCategory.findById(subCategoryId);
   if (!subcategory) {
     return next(new AppError(404, `subcategory (id: ${subCategoryId}) not found`));
@@ -153,7 +151,7 @@ const changeSubCategoryIcon = async (req, res, next) => {
 
   const icon = await resizeSubCategoryIcon(subcategory._id, req.file);
 
-  if (icon && subcategory.icon && subcategory.icon !== "default-sub-icon.jpeg") {
+  if (icon && subcategory.icon !== "default-sub-icon.jpeg") {
     try {
       await access(
         join(

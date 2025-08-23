@@ -160,7 +160,7 @@ const isLoggedIn = async (req, res, next) => {
 const logout = (req, res, next) => {
   const { authorization = null } = req.headers;
 
-  //delete token
+  //delete previouse token
   if (!req.cookies.jwt) {
     return next(new AppError(400, "you were not logged in "));
   }

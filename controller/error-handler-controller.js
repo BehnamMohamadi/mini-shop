@@ -19,14 +19,11 @@ const mongooseValidationError = (errors) => {
 const mongoConnectionError = () =>
   new AppError(500, "Database connection failed. Please try again later");
 
-// Rate Limiting Error
 const rateLimitError = () =>
   new AppError(429, "Too many requests. Please try again later");
 
 const duplicateValidationError = ({ errorResponse }) => {
-  // error.message.match(/(["'])(\\?.)*?\1/)
-
-  const [key] = Object.keys(errorResponse.keyValue); //["username"]
+  const [key] = Object.keys(errorResponse.keyValue);
   const value = errorResponse.keyValue[key];
 
   const errorMessage = `duplicate : ${key}}: ${value}`;
@@ -41,6 +38,7 @@ function globalErrorHandler(err, req, res, next) {
   if (err.name === "JsonWebTokenError") err = jwtError();
   if (err.name === "ValidationError") err = mongooseValidationError(err.errors);
   if (err.code === 11000) err = duplicateValidationError(err);
+
   if (err.name === "MongoNetworkError") err = mongoConnectionError();
   if (err.name === "RateLimitError") err = rateLimitError();
 

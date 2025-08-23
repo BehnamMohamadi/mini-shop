@@ -51,7 +51,6 @@ const basketSchema = new Schema(
   }
 );
 
-// Pre-save hook to calculate totals
 basketSchema.pre("save", async function (next) {
   let totalPrice = 0;
   let totalItems = 0;
@@ -74,7 +73,6 @@ basketSchema.pre("save", async function (next) {
   next();
 });
 
-// Instance methods
 basketSchema.methods.addItem = async function (productId, count) {
   let existingItem = null;
 
@@ -137,7 +135,6 @@ basketSchema.methods.clearBasket = async function () {
   return this.save();
 };
 
-// Static methods
 basketSchema.statics.findOrCreateBasket = async function (userId) {
   let basket = await this.findOne({ user: userId }).populate("products.product");
 

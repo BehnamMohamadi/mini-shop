@@ -10,7 +10,6 @@ const getAllProducts = async (req, res, next) => {
   const productModel = new ApiFeatures(Product.find({}), req.query)
     .sort()
     .filter()
-    .paginate()
     .limitFields();
 
   const products = await productModel.model
@@ -143,14 +142,14 @@ const editProduct = async (req, res, next) => {
     }
   }
 
-  if (category) {
+  if (!!category) {
     const categoryExists = await Category.findById(category);
     if (!categoryExists) {
       return next(new AppError(400, "Category not found with this ID"));
     }
   }
 
-  if (subCategory) {
+  if (!!subCategory) {
     const subCategoryExists = await SubCategory.findById(subCategory);
     if (!subCategoryExists) {
       return next(new AppError(400, "SubCategory not found with this ID"));
