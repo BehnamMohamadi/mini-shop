@@ -1,4 +1,4 @@
-// shop.js - Updated for new basket schema (products/count instead of items/quantity)
+// shop.js - Complete file with basket status handling
 import {
   getProducts,
   groupProducts,
@@ -7,16 +7,26 @@ import {
   imageService,
 } from "./shop/shop-services.js";
 
-console.log("Shop.js with updated basket schema support");
+console.log("Shop.js with basket status support");
 
 // Global state
 let currentBasket = {};
 let groupedProducts = {};
 let allProducts = [];
+let currentBasketStatus = "open"; // Track current basket status
 
-// FUNCTIONS WITH UPDATED SCHEMA SUPPORT
+// FUNCTIONS WITH STATUS SUPPORT
 window.addToCart = async function (productId) {
   console.log("ADD TO CART:", productId);
+
+  // Check if basket is open
+  if (currentBasketStatus !== "open") {
+    basketService.showNotification(
+      "نمی‌توان محصول به سبد اضافه کرد. سبد در حالت فعال نیست",
+      "warning"
+    );
+    return;
+  }
 
   try {
     currentBasket = await basketService.addToBasket(productId, 1);
@@ -28,11 +38,7 @@ window.addToCart = async function (productId) {
     basketService.showNotification("محصول اضافه شد", "success");
   } catch (error) {
     console.error("Error adding to cart:", error);
-
-    // Show error on product card
     showErrorOnProductCard(productId, "موجودی این محصول در انبار کافی نیست");
-
-    // Also show notification
     basketService.showNotification("موجودی کافی نیست", "error");
   }
 };
@@ -40,12 +46,20 @@ window.addToCart = async function (productId) {
 window.changeQuantity = async function (productId, newQuantity) {
   console.log("CHANGE QUANTITY:", productId, "to", newQuantity);
 
+  // Check if basket is open
+  if (currentBasketStatus !== "open") {
+    basketService.showNotification(
+      "نمی‌توان تعداد محصولات را تغییر داد. سبد در حالت فعال نیست",
+      "warning"
+    );
+    return;
+  }
+
   if (newQuantity < 0) {
     newQuantity = 0;
   }
 
   try {
-    // Use updateQuantity method which handles count parameter correctly
     currentBasket = await basketService.updateQuantity(productId, newQuantity);
     console.log("Cart updated:", currentBasket);
 
@@ -61,20 +75,23 @@ window.changeQuantity = async function (productId, newQuantity) {
     }
   } catch (error) {
     console.error("Error changing quantity:", error);
-
-    // Show error on product card
     showErrorOnProductCard(productId, "تعداد درخواستی بیش از موجودی انبار است");
-
-    // Also show notification
     basketService.showNotification("موجودی کافی نیست", "error");
-
-    // Reload basket to sync with server state
     await loadBasket();
   }
 };
 
 window.removeFromCart = async function (productId) {
   console.log("REMOVE FROM CART:", productId);
+
+  // Check if basket is open
+  if (currentBasketStatus !== "open") {
+    basketService.showNotification(
+      "نمی‌توان محصول از سبد حذف کرد. سبد در حالت فعال نیست",
+      "warning"
+    );
+    return;
+  }
 
   try {
     currentBasket = await basketService.removeFromBasket(productId);
@@ -95,6 +112,15 @@ window.removeFromCart = async function (productId) {
 };
 
 window.clearBasket = async function () {
+  // Check if basket is open
+  if (currentBasketStatus !== "open") {
+    basketService.showNotification(
+      "نمی‌توان سبد را پاک کرد. سبد در حالت فعال نیست",
+      "warning"
+    );
+    return;
+  }
+
   if (!confirm("پاک کردن همه محصولات؟")) return;
 
   try {
@@ -113,17 +139,54 @@ window.clearBasket = async function () {
   }
 };
 
-window.viewProductDetails = function (productId) {
-  window.location.href = `/product/${productId}`;
-};
-
-window.proceedToCheckout = function () {
+// UPDATED: Redirect to basket management page without changing status
+window.proceedToPayment = async function () {
   const itemCount = basketService.getBasketItemCount(currentBasket);
   if (itemCount === 0) {
     basketService.showNotification("سبد خالی است", "warning");
     return;
   }
-  window.location.href = "/basket";
+
+  if (currentBasketStatus !== "open") {
+    basketService.showNotification("سبد در وضعیت مناسب برای پرداخت نیست", "warning");
+    return;
+  }
+
+  // Simply redirect to basket management page without changing status
+  basketService.showNotification("در حال انتقال به صفحه مدیریت سبد...", "info");
+
+  setTimeout(() => {
+    window.location.href = "/basket";
+  }, 1000);
+};
+
+// NEW: Update UI based on basket status
+function updateBasketStatusUI() {
+  const statusText = basketService.getStatusText(currentBasketStatus);
+
+  // Update any status indicators in the UI
+  const statusElements = document.querySelectorAll(".basket-status");
+  statusElements.forEach((element) => {
+    element.textContent = statusText;
+  });
+
+  // Disable/enable controls based on status
+  const controls = document.querySelectorAll(".buy-btn, .quantity-btn");
+  controls.forEach((control) => {
+    if (currentBasketStatus !== "open") {
+      control.disabled = true;
+      control.style.opacity = "0.5";
+      control.style.cursor = "not-allowed";
+    } else {
+      control.disabled = false;
+      control.style.opacity = "1";
+      control.style.cursor = "pointer";
+    }
+  });
+}
+
+window.viewProductDetails = function (productId) {
+  window.location.href = `/product/${productId}`;
 };
 
 // SHOW ERROR ON PRODUCT CARD
@@ -131,24 +194,20 @@ function showErrorOnProductCard(productId, errorMessage) {
   const productCards = document.querySelectorAll(`[data-product-id='${productId}']`);
 
   productCards.forEach((card) => {
-    // Remove any existing error messages
     const existingError = card.querySelector(".product-error");
     if (existingError) {
       existingError.remove();
     }
 
-    // Create error element
     const errorElement = document.createElement("div");
     errorElement.className = "product-error";
     errorElement.textContent = errorMessage;
 
-    // Add to product info section
     const productInfo = card.querySelector(".product-info");
     if (productInfo) {
       productInfo.appendChild(errorElement);
     }
 
-    // Auto-remove error after 5 seconds
     setTimeout(() => {
       if (errorElement.parentNode) {
         errorElement.remove();
@@ -173,22 +232,26 @@ function updateProductDisplay(productId) {
       return;
     }
 
-    // Clear any existing error messages when updating
     const existingError = card.querySelector(".product-error");
     if (existingError) {
       existingError.remove();
     }
+
+    const isDisabled = currentBasketStatus !== "open";
+    const disabledStyle = isDisabled
+      ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
+      : "";
 
     if (quantity > 0) {
       actionsContainer.innerHTML = `
         <div class="quantity-controls">
           <button onclick="changeQuantity('${productId}', ${
         quantity - 1
-      })" class="quantity-btn">-</button>
+      })" class="quantity-btn"${disabledStyle}>-</button>
           <span class="quantity-display">${quantity}</span>
           <button onclick="changeQuantity('${productId}', ${
         quantity + 1
-      })" class="quantity-btn">+</button>
+      })" class="quantity-btn"${disabledStyle}>+</button>
         </div>
       `;
       console.log(
@@ -196,7 +259,7 @@ function updateProductDisplay(productId) {
       );
     } else {
       actionsContainer.innerHTML = `
-        <button onclick="addToCart('${productId}')" class="buy-btn">خرید</button>
+        <button onclick="addToCart('${productId}')" class="buy-btn"${disabledStyle}>خرید</button>
       `;
       console.log(`Updated card ${index} with buy button`);
     }
@@ -263,6 +326,8 @@ async function renderCartModal() {
 
   try {
     const totalAmount = await basketService.getBasketTotal(currentBasket);
+    const statusText = basketService.getStatusText(currentBasketStatus);
+    const isDisabled = currentBasketStatus !== "open";
 
     cartItems.innerHTML = "";
 
@@ -272,6 +337,9 @@ async function renderCartModal() {
 
       const itemTotal = product.price * quantity;
       const imagePath = imageService.getImagePath(product.thumbnail, "product");
+      const disabledStyle = isDisabled
+        ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
+        : "";
 
       const cartItem = document.createElement("div");
       cartItem.className = "cart-item";
@@ -286,11 +354,11 @@ async function renderCartModal() {
           <div class="quantity-controls">
             <button onclick="changeQuantity('${productId}', ${
         quantity - 1
-      })" class="quantity-btn">-</button>
+      })" class="quantity-btn"${disabledStyle}>-</button>
             <span class="quantity-display">${quantity}</span>
             <button onclick="changeQuantity('${productId}', ${
         quantity + 1
-      })" class="quantity-btn">+</button>
+      })" class="quantity-btn"${disabledStyle}>+</button>
           </div>
           <div class="cart-item-total">${itemTotal.toLocaleString()} تومان</div>
         </div>
@@ -298,8 +366,29 @@ async function renderCartModal() {
       cartItems.appendChild(cartItem);
     });
 
+    // Show different buttons based on status
+    let actionButtons = "";
+    if (currentBasketStatus === "open") {
+      actionButtons = `
+        <button onclick="proceedToPayment()" class="checkout-btn">مدیریت سبد و پرداخت</button>
+        <button onclick="clearBasket()" class="clear-btn">پاک کردن</button>
+      `;
+    } else if (currentBasketStatus === "pending") {
+      actionButtons = `
+        <button onclick="proceedToPayment()" class="checkout-btn">مدیریت سبد</button>
+        <div class="status-message">سبد در انتظار پرداخت</div>
+      `;
+    } else if (currentBasketStatus === "finished") {
+      actionButtons = `
+        <div class="finished-message">سفارش تکمیل شده است</div>
+      `;
+    }
+
     cartTotal.innerHTML = `
       <div class="cart-total-section">
+        <div class="cart-status">
+          <span>وضعیت: <strong>${statusText}</strong></span>
+        </div>
         <div class="cart-summary">
           <div class="cart-summary-row">
             <span>تعداد:</span>
@@ -311,8 +400,7 @@ async function renderCartModal() {
           </div>
         </div>
         <div class="cart-actions">
-          <button onclick="proceedToCheckout()" class="checkout-btn">تسویه</button>
-          <button onclick="clearBasket()" class="clear-btn">پاک کردن</button>
+          ${actionButtons}
         </div>
       </div>
     `;
@@ -347,6 +435,10 @@ function renderProducts(groupedData) {
       subCategories[subCategoryName].products.forEach((product) => {
         const quantity = basketService.getProductQuantity(product._id, currentBasket);
         const imagePath = imageService.getImagePath(product.thumbnail, "product");
+        const isDisabled = currentBasketStatus !== "open";
+        const disabledStyle = isDisabled
+          ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
+          : "";
 
         const productCard = document.createElement("div");
         productCard.className = "product-card";
@@ -370,15 +462,15 @@ function renderProducts(groupedData) {
                 <div class="quantity-controls">
                   <button onclick="changeQuantity('${product._id}', ${
                       quantity - 1
-                    })" class="quantity-btn">-</button>
+                    })" class="quantity-btn"${disabledStyle}>-</button>
                   <span class="quantity-display">${quantity}</span>
                   <button onclick="changeQuantity('${product._id}', ${
                       quantity + 1
-                    })" class="quantity-btn">+</button>
+                    })" class="quantity-btn"${disabledStyle}>+</button>
                 </div>
               `
                   : `
-                <button onclick="addToCart('${product._id}')" class="buy-btn">خرید</button>
+                <button onclick="addToCart('${product._id}')" class="buy-btn"${disabledStyle}>خرید</button>
               `
               }
             </div>
@@ -400,13 +492,21 @@ function renderProducts(groupedData) {
 async function loadBasket() {
   try {
     console.log("Loading basket...");
+
+    // Get basket summary first to check status
+    const summary = await basketService.getBasketSummary();
+    currentBasketStatus = summary.basketStatus || "open";
+
     currentBasket = await basketService.getBasket();
-    console.log("Basket loaded:", currentBasket);
+    console.log("Basket loaded:", currentBasket, "Status:", currentBasketStatus);
+
     updateCartBadge();
     updateAllProducts();
+    updateBasketStatusUI();
   } catch (error) {
     console.error("Error loading basket:", error);
     currentBasket = {};
+    currentBasketStatus = "open";
   }
 }
 
@@ -523,6 +623,10 @@ function showCategoryProducts(products) {
   products.forEach((product) => {
     const quantity = basketService.getProductQuantity(product._id, currentBasket);
     const imagePath = imageService.getImagePath(product.thumbnail, "product");
+    const isDisabled = currentBasketStatus !== "open";
+    const disabledStyle = isDisabled
+      ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
+      : "";
 
     const productCard = document.createElement("div");
     productCard.className = "product-card";
@@ -546,15 +650,15 @@ function showCategoryProducts(products) {
             <div class="quantity-controls">
               <button onclick="changeQuantity('${product._id}', ${
                   quantity - 1
-                })" class="quantity-btn">-</button>
+                })" class="quantity-btn"${disabledStyle}>-</button>
               <span class="quantity-display">${quantity}</span>
               <button onclick="changeQuantity('${product._id}', ${
                   quantity + 1
-                })" class="quantity-btn">+</button>
+                })" class="quantity-btn"${disabledStyle}>+</button>
             </div>
           `
               : `
-            <button onclick="addToCart('${product._id}')" class="buy-btn">خرید</button>
+            <button onclick="addToCart('${product._id}')" class="buy-btn"${disabledStyle}>خرید</button>
           `
           }
         </div>
@@ -573,7 +677,7 @@ function showCategoryProducts(products) {
 
 // Initialize app
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("Initializing shop with updated basket schema...");
+  console.log("Initializing shop with basket status support...");
 
   try {
     // Setup UI
@@ -611,7 +715,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load basket
     await loadBasket();
 
-    console.log("Shop initialized successfully with updated basket schema");
+    console.log("Shop initialized successfully with basket status support");
     basketService.showNotification("فروشگاه بارگذاری شد", "success");
   } catch (error) {
     console.error("Error initializing shop:", error);
@@ -625,4 +729,13 @@ window.testButtons = function () {
   console.log("addToCart function:", typeof window.addToCart);
   console.log("changeQuantity function:", typeof window.changeQuantity);
   console.log("removeFromCart function:", typeof window.removeFromCart);
+  console.log("proceedToPayment function:", typeof window.proceedToPayment);
+  console.log("completePayment function:", typeof window.completePayment);
+  console.log("cancelPayment function:", typeof window.cancelPayment);
 };
+
+document.querySelector("#admin-btn-page").addEventListener("click", (e) => {
+  e.preventDefault();
+
+  window.location.href = `/admin-panel`;
+});

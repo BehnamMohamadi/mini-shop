@@ -6,6 +6,7 @@ const sharp = require("sharp");
 
 const SubCategory = require("../models/subCategory-model");
 const Category = require("../models/category-model");
+const Product = require("../models/product-model");
 
 const { AppError } = require("../utils/app-error");
 const { multerUpload } = require("../utils/multer-config");
@@ -24,6 +25,8 @@ const getAllSubCategories = async (req, res, next) => {
   const total = await totalModels.model;
 
   const { page = 1, limit = 10 } = req.query;
+
+  console.log(subcategories);
 
   res.status(200).json({
     status: "success",
@@ -110,8 +113,33 @@ const editSubCategoryById = async (req, res, next) => {
   });
 };
 
+const deleteIcon = async (icon, modelName) => {
+  if (!icon || icon === "default-icon.jpeg") return;
+
+  const path = join(
+    __dirname,
+    `../public/images/models-images/${modelName}-images/${icon}`
+  );
+
+  try {
+    await access(path, constants.F_OK);
+    await unlink(path);
+  } catch (err) {
+    console.error(`Failed to delete ${modelName} icon:`, err.message);
+  }
+};
+
 const deleteSubCategoryById = async (req, res, next) => {
   const { subCategoryId } = req.params;
+
+  //eachProductsByThisSubCategory
+  const products = await Product.find({ subCategory: subCategoryId });
+  if (products.length) {
+    for (const p of products) {
+      await Product.findByIdAndDelete(p._id);
+      await deleteIcon(p.icon, "product");
+    }
+  }
 
   const subcategory = await SubCategory.findByIdAndDelete(subCategoryId);
   if (!subcategory) {

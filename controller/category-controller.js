@@ -1,6 +1,9 @@
 //category-controler.js
 
 const Category = require("../models/category-model");
+const SubCategory = require("../models/subCategory-model");
+const Product = require("../models/product-model");
+
 const { AppError } = require("../utils/app-error");
 const { join } = require("node:path");
 const { access, constants, unlink } = require("node:fs/promises");
@@ -86,16 +89,49 @@ const editCategoryById = async (req, res, next) => {
   });
 };
 
+const deleteIcon = async (icon, modelName) => {
+  if (!icon || icon === "default-icon.jpeg") return;
+
+  const path = join(
+    __dirname,
+    `../public/images/models-images/${modelName}-images/${icon}`
+  );
+
+  try {
+    await access(path, constants.F_OK);
+    await unlink(path);
+  } catch (err) {
+    console.error(` Failed to delete ${modelName} icon:`, err.message);
+  }
+};
+
 const deleteCategoryById = async (req, res, next) => {
   const { categoryId } = req.params;
 
-  //delete subcategories related by this category
-
-  //delete icon category & subcategory icon
-
+  // 1) Delete category
   const category = await Category.findByIdAndDelete(categoryId);
   if (!category) {
-    return next(new AppError(404, `category (id: ${categoryId}) not found`));
+    return next(new AppError(404, `Category (id: ${categoryId}) not found`));
+  }
+
+  await deleteIcon(category.icon, "category");
+
+  // 2) Delete subcategories and their icons
+  const subCategories = await SubCategory.find({ category: categoryId });
+  if (subCategories.length) {
+    for (const sub of subCategories) {
+      await SubCategory.findByIdAndDelete(sub._id);
+      await deleteIcon(sub.icon, "subCategory");
+    }
+  }
+
+  // 3) Delete products and their icons
+  const products = await Product.find({ category: categoryId });
+  if (products.length) {
+    for (const p of products) {
+      await Product.findByIdAndDelete(p._id);
+      await deleteIcon(p.icon, "product");
+    }
   }
 
   res.status(204).json({

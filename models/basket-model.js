@@ -1,4 +1,5 @@
-// models/basket-model.js - Updated to match order schema pattern
+// models/basket-model.js - Updated with status property
+
 const { Schema, model } = require("mongoose");
 
 const basketSchema = new Schema(
@@ -28,6 +29,16 @@ const basketSchema = new Schema(
         },
       },
     ],
+
+    status: {
+      type: String,
+      enum: {
+        values: ["open", "pending", "finished"],
+        message: "Status must be one of: open, pending, finished",
+      },
+      default: "open",
+      required: [true, "Basket status is required"],
+    },
 
     totalPrice: {
       type: Number,
@@ -74,6 +85,9 @@ basketSchema.pre("save", async function (next) {
 });
 
 basketSchema.methods.addItem = async function (productId, count) {
+  if (this.status !== "open") {
+    throw new Error("Cannot add items to a basket that is not open");
+  }
   let existingItem = null;
 
   for (let item of this.products) {
@@ -96,6 +110,9 @@ basketSchema.methods.addItem = async function (productId, count) {
 };
 
 basketSchema.methods.updateItemCount = async function (productId, count) {
+  if (this.status !== "open") {
+    throw new Error("Cannot add items to a basket that is not open");
+  }
   let itemFound = false;
 
   for (let i = 0; i < this.products.length; i++) {
@@ -118,6 +135,9 @@ basketSchema.methods.updateItemCount = async function (productId, count) {
 };
 
 basketSchema.methods.removeItem = async function (productId) {
+  if (this.status !== "open") {
+    throw new Error("Cannot add items to a basket that is not open");
+  }
   const newProducts = [];
 
   for (let item of this.products) {
@@ -131,7 +151,15 @@ basketSchema.methods.removeItem = async function (productId) {
 };
 
 basketSchema.methods.clearBasket = async function () {
+  if (this.status !== "open") {
+    throw new Error("Cannot add items to a basket that is not open");
+  }
   this.products = [];
+  return this.save();
+};
+
+basketSchema.methods.updateStatus = async function (newStatus) {
+  this.status = newStatus;
   return this.save();
 };
 

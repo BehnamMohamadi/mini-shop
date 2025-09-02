@@ -138,6 +138,7 @@ const deleteUserById = async (req, res, next) => {
 
 const promoteUserToAdmin = async (req, res, next) => {
   const { userId } = req.params;
+  const { role } = req.body;
 
   const user = await User.findById(userId);
 
@@ -145,11 +146,11 @@ const promoteUserToAdmin = async (req, res, next) => {
     return next(new AppError(409, `user with id${userId} not-found`));
   }
 
-  if (user.role === "admin") {
+  if (user.role === role) {
     return next(new AppError(400, "this user is already an admin"));
   }
 
-  user.role = "admin";
+  user.role = role;
   await user.save({ validateModifiedOnly: true });
 
   res.status(200).json({ status: "success", data: { message: "role has been changed" } });

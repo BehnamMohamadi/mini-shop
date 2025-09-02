@@ -95,7 +95,7 @@ const addProduct = async (req, res, next) => {
     return next(new AppError(400, "SubCategory not found with this ID"));
   }
 
-  if (subCategoryExists.category.toString() !== category._id) {
+  if (subCategoryExists.category.toString() !== category.toString()) {
     return next(new AppError(409, "SubCategory or category not found"));
   }
 

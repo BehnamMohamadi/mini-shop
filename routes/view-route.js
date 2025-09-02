@@ -10,6 +10,7 @@ const {
   renderSingleProductPage,
   renderBasketPage,
   renderProductDetailPage,
+  renderAdminPanelPage,
 } = require("../controller/view-controller");
 
 const { isLoggedIn } = require("../controller/auth-controller");
@@ -30,5 +31,7 @@ router.get("/product", isLoggedIn, renderSingleProductPage);
 router.get("/basket", isLoggedIn, renderBasketPage);
 
 router.get("/product/:productId", isLoggedIn, renderProductDetailPage);
+
+router.get("/admin-panel", isLoggedIn, renderAdminPanelPage);
 
 module.exports = router;

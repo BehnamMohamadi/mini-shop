@@ -22,7 +22,6 @@ router.use("/categories", categoryRouter);
 
 router.use("/sub-categories", subCategoriesRouter);
 
-// Add basket routes
 router.use("/basket", basketRouter);
 
 module.exports = router;

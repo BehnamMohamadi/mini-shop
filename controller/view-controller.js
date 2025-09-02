@@ -52,6 +52,10 @@ const renderProductDetailPage = async (req, res, next) => {
   });
 };
 
+const renderAdminPanelPage = async (req, res, next) => {
+  res.render(path.join(__dirname, "../views/admin-panel.ejs"));
+};
+
 module.exports = {
   renderLoginPage,
   renderShopPage,
@@ -62,4 +66,5 @@ module.exports = {
   renderSingleProductPage,
   renderBasketPage,
   renderProductDetailPage,
+  renderAdminPanelPage,
 };

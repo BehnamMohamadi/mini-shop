@@ -1,4 +1,4 @@
-// utils/validations/basket-validator.js
+// validation/basket-validator.js
 const Joi = require("joi");
 
 // ObjectId pattern for validation
@@ -22,8 +22,13 @@ const syncBasketValidationSchema = Joi.object({
     .required(),
 });
 
+const updateBasketStatusValidationSchema = Joi.object({
+  status: Joi.string().valid("open", "pending", "finished").required(),
+});
+
 module.exports = {
   addToBasketValidationSchema,
   updateBasketItemValidationSchema,
   syncBasketValidationSchema,
+  updateBasketStatusValidationSchema,
 };
