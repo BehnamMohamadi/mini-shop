@@ -1,44 +1,47 @@
-// shop-services.js - Complete with Fixed Payment Flow
-console.log("🔧 DEBUG Shop services loaded - Backend integration with basket status");
+// shop-services.js - Complete rewritten file
+
+console.log("DEBUG: Shop services loaded - Backend integration with fixes");
 
 // API Base URL
 const API_BASE = "http://127.0.0.1:8000/api";
 
-// Product Services (unchanged)
+// Product Services
 export const getProducts = async () => {
   try {
-    console.log("🔧 DEBUG: Fetching products from:", `${API_BASE}/products`);
+    console.log("DEBUG: Fetching products from:", `${API_BASE}/products`);
     const response = await fetch(`${API_BASE}/products`);
-    console.log("🔧 DEBUG: Products response status:", response.status);
+    console.log("DEBUG: Products response status:", response.status);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
-    console.log("🔧 DEBUG: Products data:", data);
+    console.log("DEBUG: Products data received:", data.data.products.length, "products");
     return data.data.products;
   } catch (error) {
-    console.error("🔧 DEBUG: Error fetching products:", error);
+    console.error("DEBUG: Error fetching products:", error);
     throw error;
   }
 };
 
 export const getProductById = async (productId) => {
   try {
-    console.log("🔧 DEBUG: Fetching product:", productId);
+    console.log("DEBUG: Fetching product:", productId);
     const response = await fetch(`${API_BASE}/products/${productId}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
+    console.log("DEBUG: Product fetched:", data.data.name);
     return data.data;
   } catch (error) {
-    console.error("🔧 DEBUG: Error fetching product:", error);
+    console.error("DEBUG: Error fetching product:", error);
     throw error;
   }
 };
 
 export const groupProducts = (products) => {
+  console.log("DEBUG: Grouping", products.length, "products");
   const result = {};
 
   for (const product of products) {
@@ -63,94 +66,69 @@ export const groupProducts = (products) => {
     result[categoryName].subCategories[subCategoryName].products.push(product);
   }
 
+  console.log("DEBUG: Products grouped into", Object.keys(result).length, "categories");
   return result;
 };
 
-// Complete Basket Services with status handling
+// Complete Basket Services with fixes
 export const basketService = {
-  // Get basket from database - handles finished baskets
+  // Get basket from database
   async getBasket() {
     try {
-      console.log("🔧 DEBUG: Getting basket from:", `${API_BASE}/basket`);
+      console.log("DEBUG: Getting basket from:", `${API_BASE}/basket`);
 
       const response = await fetch(`${API_BASE}/basket`, {
         method: "GET",
         credentials: "include",
       });
 
-      console.log("🔧 DEBUG: Basket response status:", response.status);
+      console.log("DEBUG: Basket response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Raw basket data from server:", data);
+        console.log("DEBUG: Raw basket data from server:", data);
 
         const basket = data.data.basket;
-
-        // If basket is finished, return empty basket for frontend
-        if (basket && basket.status === "finished") {
-          console.log(
-            "🔧 DEBUG: Basket is finished, returning empty basket for new shopping"
-          );
-          this.showNotification("سفارش قبلی تکمیل شد. آماده خرید جدید هستید", "info");
-          return {};
-        }
-
-        if (basket && basket.status !== "open") {
-          console.warn("🔧 DEBUG: Basket is not open, status:", basket.status);
-          this.showNotification(
-            `سبد در حالت ${this.getStatusText(basket.status)} است`,
-            "info"
-          );
-        }
-
         const transformedBasket = this.transformServerBasket(basket);
-        console.log("🔧 DEBUG: Transformed basket:", transformedBasket);
+        console.log("DEBUG: Transformed basket:", transformedBasket);
 
         return transformedBasket;
       } else if (response.status === 401) {
-        console.warn("🔧 DEBUG: User not authenticated");
+        console.warn("DEBUG: User not authenticated");
         return {};
       } else {
-        console.warn("🔧 DEBUG: Failed to get basket:", response.status);
+        console.warn("DEBUG: Failed to get basket:", response.status);
         return {};
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error getting basket:", error);
+      console.error("DEBUG: Error getting basket:", error);
       return {};
     }
   },
 
-  // Get basket summary from database - handles finished baskets
+  // Get basket summary
   async getBasketSummary() {
     try {
-      console.log("🔧 DEBUG: Getting basket summary");
+      console.log("DEBUG: Getting basket summary");
 
       const response = await fetch(`${API_BASE}/basket/summary`, {
         method: "GET",
         credentials: "include",
       });
 
-      console.log("🔧 DEBUG: Basket summary response status:", response.status);
+      console.log("DEBUG: Basket summary response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Basket summary data:", data);
-
-        // If basket is finished, return empty summary
-        if (data.data && data.data.basketStatus === "finished") {
-          console.log(
-            "🔧 DEBUG: Basket summary shows finished status, returning empty summary"
-          );
-          return { totalItems: 0, totalPrice: 0, itemCount: 0, basketStatus: "open" };
-        }
+        console.log("DEBUG: Basket summary data:", data);
 
         return data.data;
       } else {
-        console.log("🔧 DEBUG: Basket summary failed, returning defaults");
+        console.log("DEBUG: Basket summary failed, returning defaults");
         return { totalItems: 0, totalPrice: 0, itemCount: 0, basketStatus: "open" };
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error getting basket summary:", error);
+      console.error("DEBUG: Error getting basket summary:", error);
       return { totalItems: 0, totalPrice: 0, itemCount: 0, basketStatus: "open" };
     }
   },
@@ -158,7 +136,7 @@ export const basketService = {
   // Add to basket in database
   async addToBasket(productId, count = 1) {
     try {
-      console.log("🔧 DEBUG: Adding to basket:", { productId, count });
+      console.log("DEBUG: Adding to basket:", { productId, count });
 
       const response = await fetch(`${API_BASE}/basket`, {
         method: "POST",
@@ -169,16 +147,16 @@ export const basketService = {
         body: JSON.stringify({ productId, count }),
       });
 
-      console.log("🔧 DEBUG: Add to basket response status:", response.status);
+      console.log("DEBUG: Add to basket response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Add to basket success data:", data);
+        console.log("DEBUG: Add to basket success data:", data);
         this.showNotification(data.message || "محصول اضافه شد", "success");
         return this.transformServerBasket(data.data.basket);
       } else {
         const errorText = await response.text();
-        console.error("🔧 DEBUG: Add to basket failed:", response.status, errorText);
+        console.error("DEBUG: Add to basket failed:", response.status, errorText);
 
         try {
           const errorData = JSON.parse(errorText);
@@ -190,7 +168,7 @@ export const basketService = {
         }
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error adding to basket:", error);
+      console.error("DEBUG: Error adding to basket:", error);
       this.showNotification("خطا در افزودن محصول", "error");
       throw error;
     }
@@ -199,11 +177,14 @@ export const basketService = {
   // Update count in database
   async updateQuantity(productId, count) {
     try {
-      console.log("🔧 DEBUG: Updating count:", { productId, count });
+      console.log("DEBUG: updateQuantity called with:", { productId, count });
 
       if (count <= 0) {
+        console.log("DEBUG: Count is 0 or less, removing from basket");
         return await this.removeFromBasket(productId);
       }
+
+      console.log("DEBUG: Making PUT request to update quantity");
 
       const response = await fetch(`${API_BASE}/basket/item/${productId}`, {
         method: "PUT",
@@ -214,29 +195,33 @@ export const basketService = {
         body: JSON.stringify({ count }),
       });
 
-      console.log("🔧 DEBUG: Update count response status:", response.status);
+      console.log("DEBUG: Update quantity response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Update count success:", data);
-        this.showNotification(data.message || "تعداد به‌روزرسانی شد", "success");
-        return this.transformServerBasket(data.data.basket);
+        console.log("DEBUG: Update quantity success data:", data);
+
+        const transformedBasket = this.transformServerBasket(data.data.basket);
+        console.log("DEBUG: Transformed basket:", transformedBasket);
+
+        return transformedBasket;
       } else {
         const errorText = await response.text();
-        console.error("🔧 DEBUG: Update count failed:", response.status, errorText);
+        console.error("DEBUG: Update quantity failed:", response.status, errorText);
 
+        let errorData;
         try {
-          const errorData = JSON.parse(errorText);
-          this.showNotification(errorData.message || "خطا در به‌روزرسانی", "error");
-          throw new Error(errorData.message);
+          errorData = JSON.parse(errorText);
         } catch (parseError) {
-          this.showNotification("خطا در به‌روزرسانی تعداد", "error");
-          throw new Error(`Server error: ${response.status}`);
+          console.error("DEBUG: Could not parse error response:", parseError);
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
         }
+
+        console.error("DEBUG: Parsed error data:", errorData);
+        throw new Error(errorData.message || `خطا در به‌روزرسانی: ${response.status}`);
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error updating count:", error);
-      this.showNotification("خطا در به‌روزرسانی تعداد", "error");
+      console.error("DEBUG: Exception in updateQuantity:", error);
       throw error;
     }
   },
@@ -244,23 +229,23 @@ export const basketService = {
   // Remove from basket in database
   async removeFromBasket(productId) {
     try {
-      console.log("🔧 DEBUG: Removing from basket:", productId);
+      console.log("DEBUG: Removing from basket:", productId);
 
       const response = await fetch(`${API_BASE}/basket/item/${productId}`, {
         method: "DELETE",
         credentials: "include",
       });
 
-      console.log("🔧 DEBUG: Remove from basket response status:", response.status);
+      console.log("DEBUG: Remove from basket response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Remove from basket success:", data);
+        console.log("DEBUG: Remove from basket success:", data);
         this.showNotification(data.message || "محصول حذف شد", "success");
         return this.transformServerBasket(data.data.basket);
       } else {
         const errorText = await response.text();
-        console.error("🔧 DEBUG: Remove from basket failed:", response.status, errorText);
+        console.error("DEBUG: Remove from basket failed:", response.status, errorText);
 
         try {
           const errorData = JSON.parse(errorText);
@@ -272,7 +257,7 @@ export const basketService = {
         }
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error removing from basket:", error);
+      console.error("DEBUG: Error removing from basket:", error);
       this.showNotification("خطا در حذف محصول", "error");
       throw error;
     }
@@ -281,22 +266,22 @@ export const basketService = {
   // Clear entire basket in database
   async clearBasket() {
     try {
-      console.log("🔧 DEBUG: Clearing basket");
+      console.log("DEBUG: Clearing basket");
 
       const response = await fetch(`${API_BASE}/basket`, {
         method: "DELETE",
         credentials: "include",
       });
 
-      console.log("🔧 DEBUG: Clear basket response status:", response.status);
+      console.log("DEBUG: Clear basket response status:", response.status);
 
       if (response.ok) {
-        console.log("🔧 DEBUG: Clear basket success");
+        console.log("DEBUG: Clear basket success");
         this.showNotification("سبد پاک شد", "success");
         return {};
       } else {
         const errorText = await response.text();
-        console.error("🔧 DEBUG: Clear basket failed:", response.status, errorText);
+        console.error("DEBUG: Clear basket failed:", response.status, errorText);
 
         try {
           const errorData = JSON.parse(errorText);
@@ -308,7 +293,7 @@ export const basketService = {
         }
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error clearing basket:", error);
+      console.error("DEBUG: Error clearing basket:", error);
       this.showNotification("خطا در پاک کردن سبد", "error");
       throw error;
     }
@@ -317,7 +302,7 @@ export const basketService = {
   // Update basket status
   async updateBasketStatus(status) {
     try {
-      console.log("🔧 DEBUG: Updating basket status to:", status);
+      console.log("DEBUG: Updating basket status to:", status);
 
       const response = await fetch(`${API_BASE}/basket/status`, {
         method: "PATCH",
@@ -328,16 +313,22 @@ export const basketService = {
         body: JSON.stringify({ status }),
       });
 
-      console.log("🔧 DEBUG: Update status response:", response.status);
+      console.log("DEBUG: Update status response:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Status update success:", data);
+        console.log("DEBUG: Status update success:", data);
         this.showNotification(data.message || "وضعیت سبد به‌روزرسانی شد", "success");
+
+        if (status === "finished") {
+          console.log("DEBUG: Order completed successfully");
+          return {};
+        }
+
         return this.transformServerBasket(data.data.basket);
       } else {
         const errorText = await response.text();
-        console.error("🔧 DEBUG: Status update failed:", response.status, errorText);
+        console.error("DEBUG: Status update failed:", response.status, errorText);
 
         try {
           const errorData = JSON.parse(errorText);
@@ -349,7 +340,7 @@ export const basketService = {
         }
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error updating basket status:", error);
+      console.error("DEBUG: Error updating basket status:", error);
       this.showNotification("خطا در به‌روزرسانی وضعیت سبد", "error");
       throw error;
     }
@@ -358,56 +349,60 @@ export const basketService = {
   // Get basket history
   async getBasketHistory() {
     try {
-      console.log("🔧 DEBUG: Getting basket history");
+      console.log("DEBUG: Getting basket history");
 
       const response = await fetch(`${API_BASE}/basket/history`, {
         method: "GET",
         credentials: "include",
       });
 
-      console.log("🔧 DEBUG: Basket history response status:", response.status);
+      console.log("DEBUG: Basket history response status:", response.status);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: Basket history data:", data);
+        console.log("DEBUG: Basket history data:", data);
         return data.data.baskets || [];
       } else {
-        console.log("🔧 DEBUG: Basket history failed");
+        console.log("DEBUG: Basket history failed");
         return [];
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error getting basket history:", error);
+      console.error("DEBUG: Error getting basket history:", error);
       return [];
     }
   },
 
   // Transform server basket to simple object format for frontend
   transformServerBasket(serverBasket) {
-    console.log("🔧 DEBUG: Transforming server basket:", serverBasket);
+    console.log("DEBUG: Transforming server basket:", serverBasket);
 
     const basket = {};
     if (serverBasket && serverBasket.products && Array.isArray(serverBasket.products)) {
       console.log(
-        "🔧 DEBUG: Server basket has",
+        "DEBUG: Server basket has",
         serverBasket.products.length,
-        "products"
+        "product types"
       );
 
       serverBasket.products.forEach((item, index) => {
-        console.log(`🔧 DEBUG: Processing product ${index}:`, item);
+        console.log(`DEBUG: Processing product ${index}:`, {
+          productId: item.product?._id,
+          count: item.count,
+          productName: item.product?.name,
+        });
 
-        if (item.product && item.product._id) {
+        if (item.product && item.product._id && item.count > 0) {
           basket[item.product._id] = item.count;
-          console.log(`🔧 DEBUG: Added to basket - ${item.product._id}: ${item.count}`);
+          console.log(`DEBUG: Added to basket - ${item.product._id}: ${item.count}`);
         } else {
-          console.warn(`🔧 DEBUG: Invalid product structure at index ${index}:`, item);
+          console.warn(`DEBUG: Invalid product structure at index ${index}:`, item);
         }
       });
     } else {
-      console.log("🔧 DEBUG: Server basket is empty or invalid:", serverBasket);
+      console.log("DEBUG: Server basket is empty or invalid:", serverBasket);
     }
 
-    console.log("🔧 DEBUG: Final transformed basket:", basket);
+    console.log("DEBUG: Final transformed basket:", basket);
     return basket;
   },
 
@@ -423,20 +418,26 @@ export const basketService = {
 
   // Utility functions
   getBasketItemCount(basket) {
-    const count = Object.values(basket).reduce((sum, qty) => sum + qty, 0);
-    console.log("🔧 DEBUG: Basket item count:", count);
+    const count = Object.values(basket).reduce((sum, qty) => {
+      const quantity = parseInt(qty) || 0;
+      return sum + quantity;
+    }, 0);
+    console.log("DEBUG: Basket item count calculation:", {
+      basketItems: basket,
+      totalCount: count,
+    });
     return count;
   },
 
   getProductQuantity(productId, basket) {
     const quantity = basket[productId] || 0;
-    console.log(`🔧 DEBUG: Product ${productId} quantity:`, quantity);
+    console.log(`DEBUG: Product ${productId} quantity:`, quantity);
     return quantity;
   },
 
   isProductInBasket(productId, basket) {
     const inBasket = !!(basket[productId] && basket[productId] > 0);
-    console.log(`🔧 DEBUG: Product ${productId} in basket:`, inBasket);
+    console.log(`DEBUG: Product ${productId} in basket:`, inBasket);
     return inBasket;
   },
 
@@ -447,7 +448,7 @@ export const basketService = {
       quantity: count,
     }));
     const result = { items, itemCount, isEmpty: itemCount === 0 };
-    console.log("🔧 DEBUG: Formatted basket for display:", result);
+    console.log("DEBUG: Formatted basket for display:", result);
     return result;
   },
 
@@ -457,19 +458,25 @@ export const basketService = {
       let total = 0;
       Object.entries(basket).forEach(([productId, count]) => {
         const product = products.find((p) => p._id === productId);
-        if (product) total += product.price * count;
+        if (product) {
+          const itemTotal = product.price * count;
+          total += itemTotal;
+          console.log(
+            `DEBUG: ${product.name}: ${count} × ${product.price} = ${itemTotal}`
+          );
+        }
       });
-      console.log("🔧 DEBUG: Basket total:", total);
+      console.log("DEBUG: Basket total:", total);
       return total;
-    } catch {
-      console.log("🔧 DEBUG: Error calculating basket total, returning 0");
+    } catch (error) {
+      console.error("DEBUG: Error calculating basket total:", error);
       return 0;
     }
   },
 
   // Enhanced notification system
   showNotification(message, type = "info") {
-    console.log(`🔧 DEBUG: Showing notification - ${type}: ${message}`);
+    console.log(`DEBUG: Showing notification - ${type}: ${message}`);
 
     const existingNotifications = document.querySelectorAll(".notification");
     existingNotifications.forEach((notification) => notification.remove());
@@ -524,7 +531,7 @@ export const basketService = {
 export const authService = {
   async checkAuth() {
     try {
-      console.log("🔧 DEBUG: Checking authentication");
+      console.log("DEBUG: Checking authentication");
 
       const response = await fetch(`${API_BASE}/basket/summary`, {
         method: "GET",
@@ -532,26 +539,25 @@ export const authService = {
       });
 
       const isAuth = response.ok;
-      console.log("🔧 DEBUG: Authentication status:", isAuth);
+      console.log("DEBUG: Authentication status:", isAuth);
 
       if (!isAuth) {
         const responseText = await response.text();
-        console.log("🔧 DEBUG: Auth failed response:", responseText);
+        console.log("DEBUG: Auth failed response:", responseText);
       }
 
       return isAuth;
     } catch (error) {
-      console.error("🔧 DEBUG: Auth check error:", error);
+      console.error("DEBUG: Auth check error:", error);
       return false;
     }
   },
 
   async logOut() {
     try {
-      console.log("🔧 DEBUG: Logging out");
-      // Don't clear basket on logout - let server handle it
+      console.log("DEBUG: Logging out");
     } catch (error) {
-      console.warn("🔧 DEBUG: Could not clear basket on logout:", error);
+      console.warn("DEBUG: Could not clear basket on logout:", error);
     }
 
     window.location.href = "/api/auth/logout";
@@ -559,7 +565,7 @@ export const authService = {
 
   async getUserInfo() {
     try {
-      console.log("🔧 DEBUG: Getting user info");
+      console.log("DEBUG: Getting user info");
 
       const response = await fetch(`${API_BASE}/account`, {
         method: "GET",
@@ -568,14 +574,14 @@ export const authService = {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("🔧 DEBUG: User info:", data.data.user);
+        console.log("DEBUG: User info:", data.data.user);
         return data.data.user;
       } else {
-        console.log("🔧 DEBUG: Failed to get user info");
+        console.log("DEBUG: Failed to get user info");
         return null;
       }
     } catch (error) {
-      console.error("🔧 DEBUG: Error getting user info:", error);
+      console.error("DEBUG: Error getting user info:", error);
       return null;
     }
   },

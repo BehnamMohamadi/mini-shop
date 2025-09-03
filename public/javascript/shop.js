@@ -1,4 +1,4 @@
-// shop.js - Complete file with basket status handling
+// shop.js - Complete file with debugging fixes
 import {
   getProducts,
   groupProducts,
@@ -7,19 +7,18 @@ import {
   imageService,
 } from "./shop/shop-services.js";
 
-console.log("Shop.js with basket status support");
+console.log("Shop.js with debugging fixes");
 
 // Global state
 let currentBasket = {};
 let groupedProducts = {};
 let allProducts = [];
-let currentBasketStatus = "open"; // Track current basket status
+let currentBasketStatus = "open";
 
 // FUNCTIONS WITH STATUS SUPPORT
 window.addToCart = async function (productId) {
-  console.log("ADD TO CART:", productId);
+  console.log("🔧 DEBUG: ADD TO CART called:", productId);
 
-  // Check if basket is open
   if (currentBasketStatus !== "open") {
     basketService.showNotification(
       "نمی‌توان محصول به سبد اضافه کرد. سبد در حالت فعال نیست",
@@ -30,23 +29,26 @@ window.addToCart = async function (productId) {
 
   try {
     currentBasket = await basketService.addToBasket(productId, 1);
-    console.log("Cart updated:", currentBasket);
+    console.log("🔧 DEBUG: Cart updated:", currentBasket);
 
     updateProductDisplay(productId);
     updateCartBadge();
 
     basketService.showNotification("محصول اضافه شد", "success");
   } catch (error) {
-    console.error("Error adding to cart:", error);
+    console.error("🔧 DEBUG: Error adding to cart:", error);
     showErrorOnProductCard(productId, "موجودی این محصول در انبار کافی نیست");
     basketService.showNotification("موجودی کافی نیست", "error");
   }
 };
 
 window.changeQuantity = async function (productId, newQuantity) {
-  console.log("CHANGE QUANTITY:", productId, "to", newQuantity);
+  console.log("🔧 DEBUG: CHANGE QUANTITY called:", {
+    productId,
+    newQuantity,
+    currentBasketStatus,
+  });
 
-  // Check if basket is open
   if (currentBasketStatus !== "open") {
     basketService.showNotification(
       "نمی‌توان تعداد محصولات را تغییر داد. سبد در حالت فعال نیست",
@@ -60,8 +62,13 @@ window.changeQuantity = async function (productId, newQuantity) {
   }
 
   try {
-    currentBasket = await basketService.updateQuantity(productId, newQuantity);
-    console.log("Cart updated:", currentBasket);
+    console.log("🔧 DEBUG: About to call basketService.updateQuantity");
+
+    const result = await basketService.updateQuantity(productId, newQuantity);
+    console.log("🔧 DEBUG: basketService.updateQuantity returned:", result);
+
+    currentBasket = result;
+    console.log("🔧 DEBUG: Updated currentBasket:", currentBasket);
 
     updateProductDisplay(productId);
     updateCartBadge();
@@ -72,19 +79,22 @@ window.changeQuantity = async function (productId, newQuantity) {
 
     if (newQuantity === 0) {
       basketService.showNotification("محصول از سبد حذف شد", "info");
+    } else {
+      basketService.showNotification(`تعداد به ${newQuantity} تغییر یافت`, "success");
     }
   } catch (error) {
-    console.error("Error changing quantity:", error);
-    showErrorOnProductCard(productId, "تعداد درخواستی بیش از موجودی انبار است");
-    basketService.showNotification("موجودی کافی نیست", "error");
+    console.error("🔧 DEBUG: Error in changeQuantity:", error);
+    showErrorOnProductCard(productId, "خطا در تغییر تعداد");
+    basketService.showNotification("خطا در تغییر تعداد محصول", "error");
+
+    console.log("🔧 DEBUG: Reloading basket due to error");
     await loadBasket();
   }
 };
 
 window.removeFromCart = async function (productId) {
-  console.log("REMOVE FROM CART:", productId);
+  console.log("🔧 DEBUG: REMOVE FROM CART:", productId);
 
-  // Check if basket is open
   if (currentBasketStatus !== "open") {
     basketService.showNotification(
       "نمی‌توان محصول از سبد حذف کرد. سبد در حالت فعال نیست",
@@ -95,7 +105,7 @@ window.removeFromCart = async function (productId) {
 
   try {
     currentBasket = await basketService.removeFromBasket(productId);
-    console.log("Cart updated:", currentBasket);
+    console.log("🔧 DEBUG: Cart updated:", currentBasket);
 
     updateProductDisplay(productId);
     updateCartBadge();
@@ -106,13 +116,12 @@ window.removeFromCart = async function (productId) {
 
     basketService.showNotification("محصول از سبد حذف شد", "success");
   } catch (error) {
-    console.error("Error removing from cart:", error);
+    console.error("🔧 DEBUG: Error removing from cart:", error);
     basketService.showNotification("خطا در حذف محصول", "error");
   }
 };
 
 window.clearBasket = async function () {
-  // Check if basket is open
   if (currentBasketStatus !== "open") {
     basketService.showNotification(
       "نمی‌توان سبد را پاک کرد. سبد در حالت فعال نیست",
@@ -134,12 +143,11 @@ window.clearBasket = async function () {
 
     basketService.showNotification("سبد پاک شد", "success");
   } catch (error) {
-    console.error("Error clearing basket:", error);
+    console.error("🔧 DEBUG: Error clearing basket:", error);
     basketService.showNotification("خطا در پاک کردن سبد", "error");
   }
 };
 
-// UPDATED: Redirect to basket management page without changing status
 window.proceedToPayment = async function () {
   const itemCount = basketService.getBasketItemCount(currentBasket);
   if (itemCount === 0) {
@@ -152,7 +160,6 @@ window.proceedToPayment = async function () {
     return;
   }
 
-  // Simply redirect to basket management page without changing status
   basketService.showNotification("در حال انتقال به صفحه مدیریت سبد...", "info");
 
   setTimeout(() => {
@@ -160,17 +167,18 @@ window.proceedToPayment = async function () {
   }, 1000);
 };
 
-// NEW: Update UI based on basket status
+window.goToBasketPage = function () {
+  window.location.href = "/basket";
+};
+
 function updateBasketStatusUI() {
   const statusText = basketService.getStatusText(currentBasketStatus);
 
-  // Update any status indicators in the UI
   const statusElements = document.querySelectorAll(".basket-status");
   statusElements.forEach((element) => {
     element.textContent = statusText;
   });
 
-  // Disable/enable controls based on status
   const controls = document.querySelectorAll(".buy-btn, .quantity-btn");
   controls.forEach((control) => {
     if (currentBasketStatus !== "open") {
@@ -183,13 +191,14 @@ function updateBasketStatusUI() {
       control.style.cursor = "pointer";
     }
   });
+
+  console.log("🔧 DEBUG: UI updated for basket status:", currentBasketStatus);
 }
 
 window.viewProductDetails = function (productId) {
   window.location.href = `/product/${productId}`;
 };
 
-// SHOW ERROR ON PRODUCT CARD
 function showErrorOnProductCard(productId, errorMessage) {
   const productCards = document.querySelectorAll(`[data-product-id='${productId}']`);
 
@@ -216,19 +225,19 @@ function showErrorOnProductCard(productId, errorMessage) {
   });
 }
 
-// Helper functions
 function updateProductDisplay(productId) {
+  console.log("🔧 DEBUG: updateProductDisplay called for:", productId);
+
   const quantity = basketService.getProductQuantity(productId, currentBasket);
   const productCards = document.querySelectorAll(`[data-product-id='${productId}']`);
 
-  console.log(
-    `Updating ${productCards.length} cards for product ${productId} with quantity ${quantity}`
-  );
+  console.log("🔧 DEBUG: Found", productCards.length, "cards for product", productId);
+  console.log("🔧 DEBUG: Current quantity in basket:", quantity);
 
   productCards.forEach((card, index) => {
     const actionsContainer = card.querySelector(".product-actions");
     if (!actionsContainer) {
-      console.warn(`No actions container found for card ${index}`);
+      console.warn("🔧 DEBUG: No actions container found for card", index);
       return;
     }
 
@@ -243,25 +252,30 @@ function updateProductDisplay(productId) {
       : "";
 
     if (quantity > 0) {
+      console.log(
+        "🔧 DEBUG: Rendering quantity controls for card",
+        index,
+        "with quantity",
+        quantity
+      );
       actionsContainer.innerHTML = `
         <div class="quantity-controls">
-          <button onclick="changeQuantity('${productId}', ${
-        quantity - 1
-      })" class="quantity-btn"${disabledStyle}>-</button>
+          <button onclick="changeQuantity('${productId}', ${quantity - 1})" 
+                  class="quantity-btn"${disabledStyle}>-</button>
           <span class="quantity-display">${quantity}</span>
-          <button onclick="changeQuantity('${productId}', ${
-        quantity + 1
-      })" class="quantity-btn"${disabledStyle}>+</button>
+          <button onclick="changeQuantity('${productId}', ${quantity + 1})" 
+                  class="quantity-btn"${disabledStyle}>+</button>
         </div>
       `;
       console.log(
-        `Updated card ${index} with quantity controls for quantity ${quantity}`
+        `🔧 DEBUG: Updated card ${index} with quantity controls for quantity ${quantity}`
       );
     } else {
+      console.log("🔧 DEBUG: Rendering buy button for card", index);
       actionsContainer.innerHTML = `
         <button onclick="addToCart('${productId}')" class="buy-btn"${disabledStyle}>خرید</button>
       `;
-      console.log(`Updated card ${index} with buy button`);
+      console.log(`🔧 DEBUG: Updated card ${index} with buy button`);
     }
   });
 }
@@ -366,16 +380,15 @@ async function renderCartModal() {
       cartItems.appendChild(cartItem);
     });
 
-    // Show different buttons based on status
     let actionButtons = "";
     if (currentBasketStatus === "open") {
       actionButtons = `
-        <button onclick="proceedToPayment()" class="checkout-btn">مدیریت سبد و پرداخت</button>
+        <button onclick="goToBasketPage()" class="checkout-btn">مدیریت سبد و پرداخت</button>
         <button onclick="clearBasket()" class="clear-btn">پاک کردن</button>
       `;
     } else if (currentBasketStatus === "pending") {
       actionButtons = `
-        <button onclick="proceedToPayment()" class="checkout-btn">مدیریت سبد</button>
+        <button onclick="goToBasketPage()" class="checkout-btn">مدیریت سبد</button>
         <div class="status-message">سبد در انتظار پرداخت</div>
       `;
     } else if (currentBasketStatus === "finished") {
@@ -405,7 +418,7 @@ async function renderCartModal() {
       </div>
     `;
   } catch (error) {
-    console.error("Error rendering cart:", error);
+    console.error("🔧 DEBUG: Error rendering cart:", error);
   }
 }
 
@@ -491,22 +504,31 @@ function renderProducts(groupedData) {
 
 async function loadBasket() {
   try {
-    console.log("Loading basket...");
+    console.log("🔧 DEBUG: Loading basket...");
 
-    // Get basket summary first to check status
     const summary = await basketService.getBasketSummary();
+    console.log("🔧 DEBUG: Basket summary received:", summary);
+
     currentBasketStatus = summary.basketStatus || "open";
+    console.log("🔧 DEBUG: Current basket status set to:", currentBasketStatus);
 
     currentBasket = await basketService.getBasket();
-    console.log("Basket loaded:", currentBasket, "Status:", currentBasketStatus);
+    console.log("🔧 DEBUG: Basket loaded:", currentBasket);
 
     updateCartBadge();
     updateAllProducts();
     updateBasketStatusUI();
+
+    console.log("🔧 DEBUG: Basket loading completed successfully");
   } catch (error) {
-    console.error("Error loading basket:", error);
+    console.error("🔧 DEBUG: Error loading basket:", error);
+
     currentBasket = {};
     currentBasketStatus = "open";
+
+    updateCartBadge();
+    updateAllProducts();
+    updateBasketStatusUI();
   }
 }
 
@@ -570,7 +592,7 @@ function setupCategoryNavigation() {
         productContainer.appendChild(categoryCard);
       });
     } catch (error) {
-      console.error("Error loading categories:", error);
+      console.error("🔧 DEBUG: Error loading categories:", error);
       basketService.showNotification("خطا در بارگذاری دسته‌بندی‌ها", "error");
     }
   });
@@ -677,7 +699,7 @@ function showCategoryProducts(products) {
 
 // Initialize app
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("Initializing shop with basket status support...");
+  console.log("🔧 DEBUG: Initializing shop...");
 
   try {
     // Setup UI
@@ -705,7 +727,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // Load products
-    console.log("Loading products...");
+    console.log("🔧 DEBUG: Loading products...");
     allProducts = await getProducts();
     groupedProducts = groupProducts(allProducts);
 
@@ -715,27 +737,61 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load basket
     await loadBasket();
 
-    console.log("Shop initialized successfully with basket status support");
+    console.log("🔧 DEBUG: Shop initialized successfully");
     basketService.showNotification("فروشگاه بارگذاری شد", "success");
   } catch (error) {
-    console.error("Error initializing shop:", error);
+    console.error("🔧 DEBUG: Error initializing shop:", error);
     basketService.showNotification("خطا در بارگذاری فروشگاه", "error");
   }
 });
 
-// Test function
+// Global functions for testing
 window.testButtons = function () {
   console.log("Testing button functions...");
   console.log("addToCart function:", typeof window.addToCart);
   console.log("changeQuantity function:", typeof window.changeQuantity);
   console.log("removeFromCart function:", typeof window.removeFromCart);
   console.log("proceedToPayment function:", typeof window.proceedToPayment);
-  console.log("completePayment function:", typeof window.completePayment);
-  console.log("cancelPayment function:", typeof window.cancelPayment);
+  console.log("goToBasketPage function:", typeof window.goToBasketPage);
+  console.log("Current basket status:", currentBasketStatus);
+  console.log("Current basket:", currentBasket);
 };
 
-document.querySelector("#admin-btn-page").addEventListener("click", (e) => {
-  e.preventDefault();
+// DEBUG: Test quantity update directly
+window.testQuantityUpdate = async function (productId, newQuantity) {
+  console.log("🔧 DEBUG: Manual test - updating quantity");
+  console.log("🔧 DEBUG: Product ID:", productId);
+  console.log("🔧 DEBUG: New Quantity:", newQuantity);
+  console.log("🔧 DEBUG: Current basket:", currentBasket);
 
+  try {
+    const response = await fetch(`/api/basket/item/${productId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ count: newQuantity }),
+    });
+
+    console.log("🔧 DEBUG: Response status:", response.status);
+
+    const result = await response.json();
+    console.log("🔧 DEBUG: Response data:", result);
+
+    if (!response.ok) {
+      console.error("🔧 DEBUG: API Error:", result);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("🔧 DEBUG: Network error:", error);
+    throw error;
+  }
+};
+
+// Admin panel navigation
+document.querySelector("#admin-btn-page")?.addEventListener("click", (e) => {
+  e.preventDefault();
   window.location.href = `/admin-panel`;
 });

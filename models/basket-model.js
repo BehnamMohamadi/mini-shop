@@ -1,4 +1,4 @@
-// models/basket-model.js - Updated with status property
+// models/basket-model.js - Complete rewritten file
 
 const { Schema, model } = require("mongoose");
 
@@ -8,7 +8,6 @@ const basketSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "User ID is required"],
-      unique: true,
     },
 
     products: [
@@ -56,23 +55,43 @@ const basketSchema = new Schema(
       type: Date,
       default: Date.now,
     },
+
+    completedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
   }
 );
 
+// Indexes - Allow multiple baskets per user with different statuses
+basketSchema.index({ user: 1, status: 1 });
+basketSchema.index({ status: 1 });
+basketSchema.index({ createdAt: -1 });
+
+// Pre-save middleware to calculate totals
 basketSchema.pre("save", async function (next) {
+  console.log("DEBUG: Pre-save hook - calculating totals for basket");
+
   let totalPrice = 0;
   let totalItems = 0;
 
   if (this.products.length > 0) {
-    const { products } = await this.populate("products.product", { price: 1 });
+    // Populate if not already populated
+    if (!this.populated("products.product")) {
+      await this.populate("products.product");
+    }
 
-    for (const { product, count } of products) {
-      if (product && product.price) {
-        totalPrice += product.price * count;
-        totalItems += count;
+    for (const item of this.products) {
+      if (item.product && item.product.price && item.count > 0) {
+        const itemSubtotal = item.product.price * item.count;
+        totalPrice += itemSubtotal;
+        totalItems += item.count; // Sum all individual items
+
+        console.log(
+          `DEBUG: ${item.product.name}: ${item.count} × ${item.product.price} = ${itemSubtotal}`
+        );
       }
     }
   }
@@ -81,97 +100,214 @@ basketSchema.pre("save", async function (next) {
   this.totalItems = totalItems;
   this.lastUpdated = new Date();
 
+  // Set completion date when status changes to finished
+  if (this.status === "finished" && !this.completedAt) {
+    this.completedAt = new Date();
+    console.log("DEBUG: Order completed at:", this.completedAt);
+  }
+
+  console.log("DEBUG: Final totals - Items:", totalItems, "Price:", totalPrice);
   next();
 });
 
+// Add item to basket
 basketSchema.methods.addItem = async function (productId, count) {
+  console.log("DEBUG: addItem - ProductId:", productId, "Count:", count);
+
   if (this.status !== "open") {
     throw new Error("Cannot add items to a basket that is not open");
   }
-  let existingItem = null;
 
-  for (let item of this.products) {
-    if (item.product.toString() === productId.toString()) {
-      existingItem = item;
+  let existingItemIndex = -1;
+
+  for (let i = 0; i < this.products.length; i++) {
+    if (this.products[i].product.toString() === productId.toString()) {
+      existingItemIndex = i;
       break;
     }
   }
 
-  if (existingItem) {
-    existingItem.count += count;
+  if (existingItemIndex >= 0) {
+    this.products[existingItemIndex].count += count;
+    console.log(
+      "DEBUG: Updated existing item, new count:",
+      this.products[existingItemIndex].count
+    );
   } else {
     this.products.push({
       product: productId,
       count: count,
+      addedAt: new Date(),
     });
+    console.log("DEBUG: Added new item to basket");
   }
 
   return this.save();
 };
 
+// Update item count in basket
 basketSchema.methods.updateItemCount = async function (productId, count) {
+  console.log("DEBUG: updateItemCount - ProductId:", productId, "New Count:", count);
+
   if (this.status !== "open") {
-    throw new Error("Cannot add items to a basket that is not open");
+    throw new Error("Cannot modify items in a basket that is not open");
   }
-  let itemFound = false;
+
+  let itemIndex = -1;
 
   for (let i = 0; i < this.products.length; i++) {
     if (this.products[i].product.toString() === productId.toString()) {
-      if (count <= 0) {
-        this.products.splice(i, 1);
-      } else {
-        this.products[i].count = count;
-      }
-      itemFound = true;
+      itemIndex = i;
       break;
     }
   }
 
-  if (!itemFound) {
-    throw new Error("Item not found in basket");
-  }
-
-  return this.save();
-};
-
-basketSchema.methods.removeItem = async function (productId) {
-  if (this.status !== "open") {
-    throw new Error("Cannot add items to a basket that is not open");
-  }
-  const newProducts = [];
-
-  for (let item of this.products) {
-    if (item.product.toString() !== productId.toString()) {
-      newProducts.push(item);
+  if (itemIndex >= 0) {
+    if (count <= 0) {
+      console.log("DEBUG: Removing item at index:", itemIndex);
+      this.products.splice(itemIndex, 1);
+    } else {
+      console.log("DEBUG: Updating item count to:", count);
+      this.products[itemIndex].count = count;
+    }
+  } else {
+    // Item not found - add it if count > 0
+    if (count > 0) {
+      console.log("DEBUG: Item not found, adding new item");
+      this.products.push({
+        product: productId,
+        count: count,
+        addedAt: new Date(),
+      });
+    } else {
+      console.log("DEBUG: Item not found and count is 0, nothing to do");
     }
   }
 
-  this.products = newProducts;
   return this.save();
 };
 
-basketSchema.methods.clearBasket = async function () {
+// Remove item from basket
+basketSchema.methods.removeItem = async function (productId) {
+  console.log("DEBUG: removeItem - ProductId:", productId);
+
   if (this.status !== "open") {
-    throw new Error("Cannot add items to a basket that is not open");
+    throw new Error("Cannot remove items from a basket that is not open");
   }
-  this.products = [];
+
+  const initialLength = this.products.length;
+  this.products = this.products.filter(
+    (item) => item.product.toString() !== productId.toString()
+  );
+
+  console.log(
+    "DEBUG: Removed item, products count:",
+    initialLength,
+    "->",
+    this.products.length
+  );
   return this.save();
 };
 
+// Clear all items from basket
+basketSchema.methods.clearBasket = async function () {
+  console.log("DEBUG: clearBasket called");
+
+  if (this.status !== "open") {
+    throw new Error("Cannot clear a basket that is not open");
+  }
+
+  this.products = [];
+  console.log("DEBUG: Basket cleared");
+  return this.save();
+};
+
+// Update basket status
 basketSchema.methods.updateStatus = async function (newStatus) {
+  console.log("DEBUG: Updating basket status from", this.status, "to", newStatus);
   this.status = newStatus;
   return this.save();
 };
 
+// Debug basket contents
+basketSchema.methods.debugBasketContents = function () {
+  console.log("DEBUG: Current basket contents:");
+  console.log("  - Basket ID:", this._id);
+  console.log("  - User:", this.user);
+  console.log("  - Status:", this.status);
+  console.log("  - Total products:", this.products.length);
+  console.log("  - Total items:", this.totalItems);
+  console.log("  - Total price:", this.totalPrice);
+
+  this.products.forEach((item, index) => {
+    const productId = item.product._id || item.product;
+    const productName = item.product.name || "Unknown";
+    console.log(`  - ${index}: ${productName} (ID: ${productId}, Count: ${item.count})`);
+  });
+
+  return this.products;
+};
+
+// Static method: Find or create basket for user
 basketSchema.statics.findOrCreateBasket = async function (userId) {
-  let basket = await this.findOne({ user: userId }).populate("products.product");
+  console.log("DEBUG: findOrCreateBasket for user:", userId);
 
-  if (!basket) {
-    basket = await this.create({ user: userId, products: [] });
-    basket = await this.findById(basket._id).populate("products.product");
+  try {
+    // Find active baskets (open or pending) for this user
+    let activeBaskets = await this.find({
+      user: userId,
+      status: { $in: ["open", "pending"] },
+    })
+      .populate("products.product")
+      .sort({ lastUpdated: -1 });
+
+    console.log("DEBUG: Found", activeBaskets.length, "active baskets");
+
+    // If we have an active basket, use the most recent one
+    if (activeBaskets.length > 0) {
+      const basket = activeBaskets[0];
+      console.log("DEBUG: Using existing active basket with status:", basket.status);
+      return basket;
+    }
+
+    // No active basket exists, create a new one
+    console.log("DEBUG: Creating new basket for user");
+
+    const newBasket = await this.create({
+      user: userId,
+      products: [],
+      status: "open",
+    });
+
+    const populatedBasket = await this.findById(newBasket._id).populate(
+      "products.product"
+    );
+    console.log("DEBUG: Created new basket:", populatedBasket._id);
+
+    return populatedBasket;
+  } catch (error) {
+    console.error("DEBUG: Error in findOrCreateBasket:", error);
+    throw error;
   }
+};
 
-  return basket;
+// Static method: Get user's basket history
+basketSchema.statics.getBasketHistory = async function (userId) {
+  console.log("DEBUG: Getting basket history for user:", userId);
+
+  return this.find({
+    user: userId,
+    status: "finished",
+  })
+    .populate("products.product", "name price thumbnail brand")
+    .sort({ completedAt: -1, createdAt: -1 });
+};
+
+// Static method: Get all user's baskets
+basketSchema.statics.getUserBaskets = async function (userId) {
+  return this.find({ user: userId })
+    .populate("products.product", "name price thumbnail brand")
+    .sort({ createdAt: -1 });
 };
 
 const Basket = model("Basket", basketSchema);
