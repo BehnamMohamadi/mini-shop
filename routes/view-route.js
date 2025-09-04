@@ -1,5 +1,8 @@
 //view-route.js
 const router = require("express").Router();
+
+// Add these routes to your view-route.js file
+
 const {
   renderLoginPage,
   renderShopPage,
@@ -11,6 +14,8 @@ const {
   renderBasketPage,
   renderProductDetailPage,
   renderAdminPanelPage,
+  renderWishlistPage,
+  renderOrderHistoryPage,
 } = require("../controller/view-controller");
 
 const { isLoggedIn } = require("../controller/auth-controller");
@@ -33,5 +38,8 @@ router.get("/basket", isLoggedIn, renderBasketPage);
 router.get("/product/:productId", isLoggedIn, renderProductDetailPage);
 
 router.get("/admin-panel", isLoggedIn, renderAdminPanelPage);
+
+router.get("/wishlist", isLoggedIn, renderWishlistPage);
+router.get("/order-history", isLoggedIn, renderOrderHistoryPage);
 
 module.exports = router;

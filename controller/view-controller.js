@@ -56,6 +56,19 @@ const renderAdminPanelPage = async (req, res, next) => {
   res.render(path.join(__dirname, "../views/admin-panel.ejs"));
 };
 
+const renderWishlistPage = async (req, res, next) => {
+  res.render(path.join(__dirname, "../views/wishlist.ejs"), {
+    user: req.user,
+  });
+};
+
+const renderOrderHistoryPage = async (req, res, next) => {
+  res.render(path.join(__dirname, "../views/order-history.ejs"), {
+    user: req.user,
+  });
+};
+
+// Also update your existing module.exports to include these:
 module.exports = {
   renderLoginPage,
   renderShopPage,
@@ -67,4 +80,6 @@ module.exports = {
   renderBasketPage,
   renderProductDetailPage,
   renderAdminPanelPage,
+  renderWishlistPage,
+  renderOrderHistoryPage,
 };

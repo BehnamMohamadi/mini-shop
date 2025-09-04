@@ -70,15 +70,11 @@ basketSchema.index({ user: 1, status: 1 });
 basketSchema.index({ status: 1 });
 basketSchema.index({ createdAt: -1 });
 
-// Pre-save middleware to calculate totals
 basketSchema.pre("save", async function (next) {
-  console.log("DEBUG: Pre-save hook - calculating totals for basket");
-
   let totalPrice = 0;
   let totalItems = 0;
 
   if (this.products.length > 0) {
-    // Populate if not already populated
     if (!this.populated("products.product")) {
       await this.populate("products.product");
     }
@@ -87,11 +83,7 @@ basketSchema.pre("save", async function (next) {
       if (item.product && item.product.price && item.count > 0) {
         const itemSubtotal = item.product.price * item.count;
         totalPrice += itemSubtotal;
-        totalItems += item.count; // Sum all individual items
-
-        console.log(
-          `DEBUG: ${item.product.name}: ${item.count} × ${item.product.price} = ${itemSubtotal}`
-        );
+        totalItems += item.count;
       }
     }
   }
@@ -100,20 +92,14 @@ basketSchema.pre("save", async function (next) {
   this.totalItems = totalItems;
   this.lastUpdated = new Date();
 
-  // Set completion date when status changes to finished
   if (this.status === "finished" && !this.completedAt) {
     this.completedAt = new Date();
-    console.log("DEBUG: Order completed at:", this.completedAt);
   }
 
-  console.log("DEBUG: Final totals - Items:", totalItems, "Price:", totalPrice);
   next();
 });
 
-// Add item to basket
 basketSchema.methods.addItem = async function (productId, count) {
-  console.log("DEBUG: addItem - ProductId:", productId, "Count:", count);
-
   if (this.status !== "open") {
     throw new Error("Cannot add items to a basket that is not open");
   }
@@ -129,17 +115,12 @@ basketSchema.methods.addItem = async function (productId, count) {
 
   if (existingItemIndex >= 0) {
     this.products[existingItemIndex].count += count;
-    console.log(
-      "DEBUG: Updated existing item, new count:",
-      this.products[existingItemIndex].count
-    );
   } else {
     this.products.push({
       product: productId,
       count: count,
       addedAt: new Date(),
     });
-    console.log("DEBUG: Added new item to basket");
   }
 
   return this.save();
@@ -248,47 +229,28 @@ basketSchema.methods.debugBasketContents = function () {
   return this.products;
 };
 
-// Static method: Find or create basket for user
 basketSchema.statics.findOrCreateBasket = async function (userId) {
-  console.log("DEBUG: findOrCreateBasket for user:", userId);
+  let activeBaskets = await this.find({
+    user: userId,
+    status: { $in: ["open", "pending"] },
+  })
+    .populate("products.product")
+    .sort({ lastUpdated: -1 });
 
-  try {
-    // Find active baskets (open or pending) for this user
-    let activeBaskets = await this.find({
-      user: userId,
-      status: { $in: ["open", "pending"] },
-    })
-      .populate("products.product")
-      .sort({ lastUpdated: -1 });
-
-    console.log("DEBUG: Found", activeBaskets.length, "active baskets");
-
-    // If we have an active basket, use the most recent one
-    if (activeBaskets.length > 0) {
-      const basket = activeBaskets[0];
-      console.log("DEBUG: Using existing active basket with status:", basket.status);
-      return basket;
-    }
-
-    // No active basket exists, create a new one
-    console.log("DEBUG: Creating new basket for user");
-
-    const newBasket = await this.create({
-      user: userId,
-      products: [],
-      status: "open",
-    });
-
-    const populatedBasket = await this.findById(newBasket._id).populate(
-      "products.product"
-    );
-    console.log("DEBUG: Created new basket:", populatedBasket._id);
-
-    return populatedBasket;
-  } catch (error) {
-    console.error("DEBUG: Error in findOrCreateBasket:", error);
-    throw error;
+  if (activeBaskets.length > 0) {
+    const basket = activeBaskets[0];
+    return basket;
   }
+
+  const newBasket = await this.create({
+    user: userId,
+    products: [],
+    status: "open",
+  });
+
+  const populatedBasket = await this.findById(newBasket._id).populate("products.product");
+
+  return populatedBasket;
 };
 
 // Static method: Get user's basket history

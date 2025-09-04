@@ -613,7 +613,204 @@ export const imageService = {
     }
   },
 };
+// Add this wishlistService to your shop-services.js file
 
+export const wishlistService = {
+  // Toggle product in/out of wishlist
+  async toggleWishlist(productId) {
+    try {
+      console.log("DEBUG: Toggling wishlist for product:", productId);
+
+      const response = await fetch(`${API_BASE}/wishlist/toggle/${productId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      console.log("DEBUG: Toggle wishlist response status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("DEBUG: Toggle wishlist success:", data);
+        this.showNotification(data.data.message, "success");
+        return data.data;
+      } else {
+        const errorText = await response.text();
+        console.error("DEBUG: Toggle wishlist failed:", response.status, errorText);
+        throw new Error("خطا در به‌روزرسانی علاقه‌مندی‌ها");
+      }
+    } catch (error) {
+      console.error("DEBUG: Error toggling wishlist:", error);
+      this.showNotification("خطا در به‌روزرسانی علاقه‌مندی‌ها", "error");
+      throw error;
+    }
+  },
+
+  // Get user's wishlist
+  async getWishlist() {
+    try {
+      console.log("DEBUG: Getting user wishlist");
+
+      const response = await fetch(`${API_BASE}/wishlist`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      console.log("DEBUG: Get wishlist response status:", response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("DEBUG: Wishlist data:", data);
+        return data.data.wishlist || [];
+      } else {
+        console.log("DEBUG: Get wishlist failed");
+        return [];
+      }
+    } catch (error) {
+      console.error("DEBUG: Error getting wishlist:", error);
+      return [];
+    }
+  },
+
+  // Check if product is in wishlist
+  async checkWishlistStatus(productId) {
+    try {
+      const response = await fetch(`${API_BASE}/wishlist/check/${productId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data.isInWishlist;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error("DEBUG: Error checking wishlist status:", error);
+      return false;
+    }
+  },
+
+  // Get wishlist count
+  async getWishlistCount() {
+    try {
+      const response = await fetch(`${API_BASE}/wishlist/count`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data.count || 0;
+      } else {
+        return 0;
+      }
+    } catch (error) {
+      console.error("DEBUG: Error getting wishlist count:", error);
+      return 0;
+    }
+  },
+
+  // Remove from wishlist
+  async removeFromWishlist(productId) {
+    try {
+      console.log("DEBUG: Removing from wishlist:", productId);
+
+      const response = await fetch(`${API_BASE}/wishlist/${productId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.showNotification(data.data.message, "success");
+        return true;
+      } else {
+        throw new Error("خطا در حذف از علاقه‌مندی‌ها");
+      }
+    } catch (error) {
+      console.error("DEBUG: Error removing from wishlist:", error);
+      this.showNotification("خطا در حذف از علاقه‌مندی‌ها", "error");
+      return false;
+    }
+  },
+
+  // Clear entire wishlist
+  async clearWishlist() {
+    try {
+      console.log("DEBUG: Clearing wishlist");
+
+      const response = await fetch(`${API_BASE}/wishlist`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.showNotification(data.data.message, "success");
+        return true;
+      } else {
+        throw new Error("خطا در پاک کردن علاقه‌مندی‌ها");
+      }
+    } catch (error) {
+      console.error("DEBUG: Error clearing wishlist:", error);
+      this.showNotification("خطا در پاک کردن علاقه‌مندی‌ها", "error");
+      return false;
+    }
+  },
+
+  // Show notification (reuse from basketService)
+  showNotification(message, type = "info") {
+    console.log(`DEBUG: Showing notification - ${type}: ${message}`);
+
+    const existingNotifications = document.querySelectorAll(".notification");
+    existingNotifications.forEach((notification) => notification.remove());
+
+    const notification = document.createElement("div");
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+
+    Object.assign(notification.style, {
+      position: "fixed",
+      top: "20px",
+      right: "20px",
+      padding: "12px 20px",
+      borderRadius: "5px",
+      color: "white",
+      zIndex: "10000",
+      transform: "translateX(100%)",
+      transition: "transform 0.3s ease",
+      fontFamily: "Arial, sans-serif",
+      fontSize: "14px",
+      maxWidth: "300px",
+      wordWrap: "break-word",
+      boxShadow: "0 4px 15px rgba(0, 0, 0, 0.2)",
+    });
+
+    const colors = {
+      success: "#4CAF50",
+      error: "#f44336",
+      warning: "#ff9800",
+      info: "#2196F3",
+    };
+    notification.style.backgroundColor = colors[type] || colors.info;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.style.transform = "translateX(0)";
+    }, 100);
+
+    setTimeout(() => {
+      notification.style.transform = "translateX(100%)";
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 3000);
+  },
+};
 // Make image handler globally available
 window.handleImageError = imageService.handleImageError;
 

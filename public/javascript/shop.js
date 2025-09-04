@@ -5,10 +5,10 @@ import {
   basketService,
   authService,
   imageService,
+  wishlistService,
 } from "./shop/shop-services.js";
 
-console.log("Shop.js with debugging fixes");
-
+let userWishlist = [];
 // Global state
 let currentBasket = {};
 let groupedProducts = {};
@@ -226,34 +226,56 @@ function showErrorOnProductCard(productId, errorMessage) {
 }
 
 function updateProductDisplay(productId) {
-  console.log("🔧 DEBUG: updateProductDisplay called for:", productId);
+  console.log("DEBUG: updateProductDisplay called for:", productId);
 
   const quantity = basketService.getProductQuantity(productId, currentBasket);
   const productCards = document.querySelectorAll(`[data-product-id='${productId}']`);
 
-  console.log("🔧 DEBUG: Found", productCards.length, "cards for product", productId);
-  console.log("🔧 DEBUG: Current quantity in basket:", quantity);
+  console.log("DEBUG: Found", productCards.length, "cards for product", productId);
+  console.log("DEBUG: Current quantity in basket:", quantity);
 
   productCards.forEach((card, index) => {
     const actionsContainer = card.querySelector(".product-actions");
     if (!actionsContainer) {
-      console.warn("🔧 DEBUG: No actions container found for card", index);
+      console.warn("DEBUG: No actions container found for card", index);
       return;
     }
 
+    // Find the product data to check stock
+    const product = allProducts.find((p) => p._id === productId);
+    const isOutOfStock = product && product.quantity <= 0;
+    const isDisabled = currentBasketStatus !== "open" || isOutOfStock;
+
+    const disabledStyle = isDisabled
+      ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
+      : "";
+
+    // Remove any existing error messages
     const existingError = card.querySelector(".product-error");
     if (existingError) {
       existingError.remove();
     }
 
-    const isDisabled = currentBasketStatus !== "open";
-    const disabledStyle = isDisabled
-      ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
-      : "";
+    // FIXED: Update stock status only when out of stock
+    const stockStatus = card.querySelector(".stock-status");
+    if (stockStatus && !isOutOfStock) {
+      stockStatus.remove(); // Remove stock status if product is back in stock
+    } else if (!stockStatus && isOutOfStock) {
+      // Add stock status if product went out of stock
+      const stockDiv = document.createElement("div");
+      stockDiv.className = "stock-status out-of-stock";
+      stockDiv.textContent = "این محصول در حال حاضر موجود نیست";
 
-    if (quantity > 0) {
+      const productInfo = card.querySelector(".product-info");
+      const priceDiv = productInfo.querySelector(".product-price");
+      priceDiv.insertAdjacentElement("afterend", stockDiv);
+    }
+
+    if (isOutOfStock) {
+      actionsContainer.innerHTML = `<button class="buy-btn" disabled style="opacity: 0.5; cursor: not-allowed;">ناموجود</button>`;
+    } else if (quantity > 0) {
       console.log(
-        "🔧 DEBUG: Rendering quantity controls for card",
+        "DEBUG: Rendering quantity controls for card",
         index,
         "with quantity",
         quantity
@@ -267,15 +289,11 @@ function updateProductDisplay(productId) {
                   class="quantity-btn"${disabledStyle}>+</button>
         </div>
       `;
-      console.log(
-        `🔧 DEBUG: Updated card ${index} with quantity controls for quantity ${quantity}`
-      );
     } else {
-      console.log("🔧 DEBUG: Rendering buy button for card", index);
+      console.log("DEBUG: Rendering buy button for card", index);
       actionsContainer.innerHTML = `
         <button onclick="addToCart('${productId}')" class="buy-btn"${disabledStyle}>خرید</button>
       `;
-      console.log(`🔧 DEBUG: Updated card ${index} with buy button`);
     }
   });
 }
@@ -420,86 +438,6 @@ async function renderCartModal() {
   } catch (error) {
     console.error("🔧 DEBUG: Error rendering cart:", error);
   }
-}
-
-function renderProducts(groupedData) {
-  const productContainer = document.getElementById("product-container");
-  if (!productContainer) return;
-
-  productContainer.innerHTML = "";
-
-  Object.keys(groupedData).forEach((categoryName) => {
-    const categoryTitle = document.createElement("h2");
-    categoryTitle.className = "category-title";
-    categoryTitle.textContent = categoryName;
-    productContainer.appendChild(categoryTitle);
-
-    const subCategories = groupedData[categoryName].subCategories;
-
-    Object.keys(subCategories).forEach((subCategoryName) => {
-      const subCategoryTitle = document.createElement("h3");
-      subCategoryTitle.className = "subcategory-title";
-      subCategoryTitle.textContent = subCategoryName;
-      productContainer.appendChild(subCategoryTitle);
-
-      const productGrid = document.createElement("div");
-      productGrid.className = "product-grid";
-
-      subCategories[subCategoryName].products.forEach((product) => {
-        const quantity = basketService.getProductQuantity(product._id, currentBasket);
-        const imagePath = imageService.getImagePath(product.thumbnail, "product");
-        const isDisabled = currentBasketStatus !== "open";
-        const disabledStyle = isDisabled
-          ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
-          : "";
-
-        const productCard = document.createElement("div");
-        productCard.className = "product-card";
-        productCard.setAttribute("data-product-id", product._id);
-
-        productCard.innerHTML = `
-          <div class="product-image-container">
-            <img src="${imagePath}" alt="${product.name}" 
-                 onerror="handleImageError(this, 'product')" class="product-image" />
-          </div>
-          
-          <div class="product-info">
-            <div class="product-name">${product.name}</div>
-            <div class="product-brand">برند: ${product.brand}</div>
-            <div class="product-price">${product.price.toLocaleString()} تومان</div>
-            
-            <div class="product-actions">
-              ${
-                quantity > 0
-                  ? `
-                <div class="quantity-controls">
-                  <button onclick="changeQuantity('${product._id}', ${
-                      quantity - 1
-                    })" class="quantity-btn"${disabledStyle}>-</button>
-                  <span class="quantity-display">${quantity}</span>
-                  <button onclick="changeQuantity('${product._id}', ${
-                      quantity + 1
-                    })" class="quantity-btn"${disabledStyle}>+</button>
-                </div>
-              `
-                  : `
-                <button onclick="addToCart('${product._id}')" class="buy-btn"${disabledStyle}>خرید</button>
-              `
-              }
-            </div>
-            
-            <button onclick="viewProductDetails('${
-              product._id
-            }')" class="details-btn">مشاهده جزئیات</button>
-          </div>
-        `;
-
-        productGrid.appendChild(productCard);
-      });
-
-      productContainer.appendChild(productGrid);
-    });
-  });
 }
 
 async function loadBasket() {
@@ -794,4 +732,219 @@ window.testQuantityUpdate = async function (productId, newQuantity) {
 document.querySelector("#admin-btn-page")?.addEventListener("click", (e) => {
   e.preventDefault();
   window.location.href = `/admin-panel`;
+});
+// Add this function to load user's wishlist
+async function loadWishlist() {
+  try {
+    console.log("DEBUG: Loading user wishlist...");
+    userWishlist = await wishlistService.getWishlist();
+    console.log("DEBUG: Wishlist loaded with", userWishlist.length, "items");
+
+    // Update heart icons for all products
+    updateAllWishlistHearts();
+  } catch (error) {
+    console.error("DEBUG: Error loading wishlist:", error);
+    userWishlist = [];
+  }
+}
+
+// Function to check if product is in wishlist
+function isProductInWishlist(productId) {
+  return userWishlist.some((item) => item.product._id === productId);
+}
+
+// Update all wishlist hearts
+function updateAllWishlistHearts() {
+  const allProductCards = document.querySelectorAll("[data-product-id]");
+
+  allProductCards.forEach((card) => {
+    const productId = card.dataset.productId;
+    const heartBtn = card.querySelector(".wishlist-heart");
+
+    if (heartBtn) {
+      const isInWishlist = isProductInWishlist(productId);
+      heartBtn.classList.toggle("active", isInWishlist);
+      heartBtn.innerHTML = isInWishlist ? "❤️" : "🤍";
+    }
+  });
+}
+
+// Toggle wishlist function
+window.toggleWishlist = async function (productId, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  console.log("DEBUG: Toggle wishlist for product:", productId);
+
+  try {
+    const result = await wishlistService.toggleWishlist(productId);
+
+    // Update local wishlist state
+    if (result.isInWishlist) {
+      // Add to local wishlist (simplified - in real app you'd fetch product details)
+      if (!isProductInWishlist(productId)) {
+        userWishlist.push({ product: { _id: productId } });
+      }
+    } else {
+      // Remove from local wishlist
+      userWishlist = userWishlist.filter((item) => item.product._id !== productId);
+    }
+
+    // Update heart icon for this specific product
+    const productCards = document.querySelectorAll(`[data-product-id='${productId}']`);
+    productCards.forEach((card) => {
+      const heartBtn = card.querySelector(".wishlist-heart");
+      if (heartBtn) {
+        heartBtn.classList.toggle("active", result.isInWishlist);
+        heartBtn.innerHTML = result.isInWishlist ? "❤️" : "🤍";
+      }
+    });
+  } catch (error) {
+    console.error("DEBUG: Error toggling wishlist:", error);
+  }
+};
+
+// Updated renderProducts function with heart buttons
+function renderProducts(groupedData) {
+  const productContainer = document.getElementById("product-container");
+  if (!productContainer) return;
+
+  productContainer.innerHTML = "";
+
+  Object.keys(groupedData).forEach((categoryName) => {
+    const categoryTitle = document.createElement("h2");
+    categoryTitle.className = "category-title";
+    categoryTitle.textContent = categoryName;
+    productContainer.appendChild(categoryTitle);
+
+    const subCategories = groupedData[categoryName].subCategories;
+
+    Object.keys(subCategories).forEach((subCategoryName) => {
+      const subCategoryTitle = document.createElement("h3");
+      subCategoryTitle.className = "subcategory-title";
+      subCategoryTitle.textContent = subCategoryName;
+      productContainer.appendChild(subCategoryTitle);
+
+      const productGrid = document.createElement("div");
+      productGrid.className = "product-grid";
+
+      subCategories[subCategoryName].products.forEach((product) => {
+        const quantity = basketService.getProductQuantity(product._id, currentBasket);
+        const imagePath = imageService.getImagePath(product.thumbnail, "product");
+        const isDisabled = currentBasketStatus !== "open";
+        const isOutOfStock = product.quantity <= 0;
+        const isInWishlist = isProductInWishlist(product._id);
+
+        const disabledStyle =
+          isDisabled || isOutOfStock
+            ? ' disabled style="opacity: 0.5; cursor: not-allowed;"'
+            : "";
+
+        const productCard = document.createElement("div");
+        productCard.className = "product-card";
+        productCard.setAttribute("data-product-id", product._id);
+
+        if (isOutOfStock) {
+          productCard.classList.add("out-of-stock");
+        }
+
+        let stockStatusHtml = "";
+        let actionButtonsHtml = "";
+
+        if (isOutOfStock) {
+          stockStatusHtml = `<div class="stock-status out-of-stock">این محصول در حال حاضر موجود نیست</div>`;
+          actionButtonsHtml = `<button class="buy-btn" disabled style="opacity: 0.5; cursor: not-allowed;">ناموجود</button>`;
+        } else {
+          stockStatusHtml = "";
+          actionButtonsHtml =
+            quantity > 0
+              ? `
+            <div class="quantity-controls">
+              <button onclick="changeQuantity('${product._id}', ${quantity - 1})" 
+                      class="quantity-btn"${disabledStyle}>-</button>
+              <span class="quantity-display">${quantity}</span>
+              <button onclick="changeQuantity('${product._id}', ${quantity + 1})" 
+                      class="quantity-btn"${disabledStyle}>+</button>
+            </div>
+          `
+              : `<button onclick="addToCart('${product._id}')" class="buy-btn"${disabledStyle}>خرید</button>`;
+        }
+
+        productCard.innerHTML = `
+          <div class="product-image-container">
+            <img src="${imagePath}" alt="${product.name}" 
+                 onerror="handleImageError(this, 'product')" class="product-image" />
+            ${isOutOfStock ? '<div class="out-of-stock-overlay">ناموجود</div>' : ""}
+            
+            <button class="wishlist-heart ${isInWishlist ? "active" : ""}" 
+                    onclick="toggleWishlist('${product._id}', event)"
+                    title="${
+                      isInWishlist ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"
+                    }">
+              ${isInWishlist ? "❤️" : "🤍"}
+            </button>
+          </div>
+          
+          <div class="product-info">
+            <div class="product-name">${product.name}</div>
+            <div class="product-brand">برند: ${product.brand}</div>
+            <div class="product-price">${product.price.toLocaleString()} تومان</div>
+            
+            ${stockStatusHtml}
+            
+            <div class="product-actions">
+              ${actionButtonsHtml}
+            </div>
+            
+            <button onclick="viewProductDetails('${
+              product._id
+            }')" class="details-btn">مشاهده جزئیات</button>
+          </div>
+        `;
+
+        productGrid.appendChild(productCard);
+      });
+
+      productContainer.appendChild(productGrid);
+    });
+  });
+}
+
+// Update the initialization in DOMContentLoaded
+document.addEventListener("DOMContentLoaded", async () => {
+  console.log("DEBUG: Initializing shop...");
+
+  try {
+    // ... existing setup code ...
+
+    // Check authentication
+    const isAuthenticated = await authService.checkAuth();
+    if (!isAuthenticated) {
+      basketService.showNotification("لطفا ابتدا وارد شوید", "warning");
+      setTimeout(() => (window.location.href = "/login"), 2000);
+      return;
+    }
+
+    // Load products and data
+    console.log("DEBUG: Loading products...");
+    allProducts = await getProducts();
+    groupedProducts = groupProducts(allProducts);
+
+    // Load basket and wishlist in parallel
+    await Promise.all([
+      loadBasket(),
+      loadWishlist(), // Add this line
+    ]);
+
+    // Render products
+    renderProducts(groupedProducts);
+
+    console.log("DEBUG: Shop initialized successfully");
+    basketService.showNotification("فروشگاه بارگذاری شد", "success");
+  } catch (error) {
+    console.error("DEBUG: Error initializing shop:", error);
+    basketService.showNotification("خطا در بارگذاری فروشگاه", "error");
+  }
 });

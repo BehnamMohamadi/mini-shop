@@ -1,13 +1,13 @@
-<!-- views/product-detail.ejs -->
+<!-- views/wishlist.ejs -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>جزئیات محصول - فروشگاه فلان</title>
+  <title>علاقه‌مندی‌ها - فروشگاه فلان</title>
   <link href="https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="/stylesheet/product-detail.css" />
+  <link rel="stylesheet" href="/stylesheet/wishlist.css" />
 </head>
 
 <body>
@@ -18,12 +18,13 @@
     </div>
     <div class="left-side-header">
       <nav>
+        <a href="/shop">فروشگاه</a>
+        <a href="/basket">سبد خرید</a>
         <% if (user && user.role==='admin' ) { %>
           <a href="/admin-panel">مدیریت</a>
           <% } %>
       </nav>
 
-      <!-- Cart Icon -->
       <div class="cart-wrapper">
         <div class="cart-icon" id="cart-icon">🛒</div>
       </div>
@@ -31,14 +32,24 @@
   </header>
 
   <!-- Main Container -->
-  <div class="product-detail-container">
-    <button onclick="goBackToShop()" class="back-to-shop">
-      <i class='bx bx-arrow-back'></i> بازگشت به فروشگاه
-    </button>
+  <div class="wishlist-container">
+    <div class="page-header">
+      <button onclick="goBackToShop()" class="back-btn">
+        <i class='bx bx-arrow-back'></i> بازگشت به فروشگاه
+      </button>
+      <h1>علاقه‌مندی‌های من</h1>
+      <p>محصولاتی که برای خرید آینده ذخیره کرده‌اید</p>
+    </div>
 
-    <div id="product-detail-content" class="loading-detail">
+    <div class="wishlist-actions">
+      <button onclick="clearAllWishlist()" class="clear-all-btn" id="clear-all-btn">
+        <i class='bx bx-trash'></i> پاک کردن همه
+      </button>
+    </div>
+
+    <div id="wishlist-content" class="loading">
       <div class="spinner"></div>
-      <p>در حال بارگذاری...</p>
+      <p>در حال بارگذاری علاقه‌مندی‌ها...</p>
     </div>
   </div>
 
@@ -52,10 +63,7 @@
     <div id="cart-total"></div>
   </div>
 
-  <!-- Notification Container -->
-  <div id="notification-container"></div>
-
-  <script type="module" src="/javascript/product-detail.js"></script>
+  <script type="module" src="/javascript/wishlist.js"></script>
 </body>
 
 </html>

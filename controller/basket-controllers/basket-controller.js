@@ -1,158 +1,118 @@
-// controller/basket-controller.js - Complete rewritten file
+// controller/basket-controller.js - Complete fixed version with inventory management
 
 const Basket = require("../../models/basket-model");
 const Product = require("../../models/product-model");
 const { AppError } = require("../../utils/app-error");
 const { ApiFeatures } = require("../../utils/api-features");
 
-// Get user's active basket
 const getBasket = async (req, res, next) => {
-  try {
-    console.log("DEBUG: Getting basket for user:", req.user._id);
+  const basket = await Basket.findOrCreateBasket(req.user._id);
 
-    const basket = await Basket.findOrCreateBasket(req.user._id);
-
-    console.log("DEBUG: Retrieved/created basket:", {
-      id: basket._id,
-      status: basket.status,
-      totalItems: basket.totalItems,
-      productCount: basket.products.length,
-    });
-
-    res.status(200).json({
-      status: "success",
-      data: { basket },
-    });
-  } catch (error) {
-    console.error("DEBUG: Error getting basket:", error);
-    return next(new AppError(500, "خطا در دریافت سبد"));
-  }
+  res.status(200).json({
+    status: "success",
+    data: { basket },
+  });
 };
 
-// Get all baskets (admin function)
 const getAllBaskets = async (req, res, next) => {
-  try {
-    const basketModel = new ApiFeatures(
-      Basket.find({}).populate("user", "firstname lastname username"),
-      req.query
-    )
-      .sort()
-      .filter()
-      .paginate()
-      .limitFields();
+  const basketModel = new ApiFeatures(
+    Basket.find({}).populate("user", "firstname lastname username"),
+    req.query
+  )
+    .sort()
+    .filter()
+    .paginate()
+    .limitFields();
 
-    const baskets = await basketModel.model.populate(
-      "products.product",
-      "name price thumbnail"
-    );
+  const baskets = await basketModel.model.populate(
+    "products.product",
+    "name price thumbnail"
+  );
 
-    const totalModels = new ApiFeatures(Basket.find({}), req.query).filter();
-    const total = await totalModels.model;
+  const totalModels = new ApiFeatures(Basket.find({}), req.query).filter();
+  const total = await totalModels.model;
 
-    const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
 
-    res.status(200).json({
-      status: "success",
-      page: Number(page),
-      perpage: Number(limit),
-      total: total.length,
-      totalPages: Math.ceil(total.length / Number(limit)),
-      data: { baskets },
-    });
-  } catch (error) {
-    console.error("DEBUG: Error getting all baskets:", error);
-    return next(new AppError(500, "خطا در دریافت لیست سبدها"));
-  }
+  res.status(200).json({
+    status: "success",
+    page: Number(page),
+    perpage: Number(limit),
+    total: total.length,
+    totalPages: Math.ceil(total.length / Number(limit)),
+    data: { baskets },
+  });
 };
 
-// Add product to basket
+// Add product to basket with proper validation
 const addToBasket = async (req, res, next) => {
   const { productId, count = 1 } = req.body;
 
-  console.log("DEBUG: addToBasket called:", { productId, count });
-
   if (!productId) {
-    return next(new AppError(400, "شناسه محصول الزامی است"));
+    return next(new AppError(400, "product id is requirese"));
   }
 
   if (count < 1) {
-    return next(new AppError(400, "تعداد باید حداقل 1 باشد"));
+    return next(new AppError(400, "product count should be more than one"));
   }
 
-  try {
-    const product = await Product.findById(productId);
-    if (!product) {
-      return next(new AppError(404, "محصول یافت نشد"));
+  const product = await Product.findById(productId);
+  if (!product) {
+    return next(new AppError(404, "cant find any product"));
+  }
+
+  if (product.quantity <= 0) {
+    return next(new AppError(400, "this product is not remain"));
+  }
+
+  const basket = await Basket.findOrCreateBasket(req.user._id);
+
+  // Check current quantity in basket
+  const existingItem = basket.products.find(
+    (item) => item.product._id.toString() === productId.toString()
+  );
+  const currentCountInBasket = existingItem ? existingItem.count : 0;
+  const totalCountAfterAdd = currentCountInBasket + count;
+
+  console.log("DEBUG: Inventory validation:", {
+    currentInBasket: currentCountInBasket,
+    requestedToAdd: count,
+    totalAfterAdd: totalCountAfterAdd,
+    availableStock: product.quantity,
+  });
+
+  // FIXED: Strict inventory checking - prevent overselling
+  if (totalCountAfterAdd > product.quantity) {
+    const availableToAdd = Math.max(0, product.quantity - currentCountInBasket);
+
+    if (availableToAdd <= 0) {
+      return next(
+        new AppError(
+          400,
+          `محصول "${product.name}" با حداکثر مقدار موجود در سبد شما قرار دارد`
+        )
+      );
     }
 
-    console.log("DEBUG: Product found:", product.name, "- Stock:", product.quantity);
-
-    // Get or create basket
-    const basket = await Basket.findOrCreateBasket(req.user._id);
-
-    // Check current quantity in basket
-    const existingItem = basket.products.find(
-      (item) => item.product._id.toString() === productId.toString()
+    return next(
+      new AppError(
+        400,
+        `تنها ${availableToAdd} عدد از محصول "${product.name}" در دسترس است`
+      )
     );
-    const currentCountInBasket = existingItem ? existingItem.count : 0;
-    const totalCountAfterAdd = currentCountInBasket + count;
-
-    console.log("DEBUG: Inventory check:", {
-      currentInBasket: currentCountInBasket,
-      requestedToAdd: count,
-      totalAfterAdd: totalCountAfterAdd,
-      availableStock: product.quantity,
-    });
-
-    // Optional: Set reasonable limits instead of strict inventory checking
-    const MAX_QUANTITY_PER_ITEM = 100;
-
-    if (totalCountAfterAdd > MAX_QUANTITY_PER_ITEM) {
-      return next(
-        new AppError(400, `حداکثر ${MAX_QUANTITY_PER_ITEM} عدد برای هر محصول مجاز است`)
-      );
-    }
-
-    // Optional: Uncomment for strict inventory checking
-    /*
-    if (totalCountAfterAdd > product.quantity) {
-      const availableToAdd = product.quantity - currentCountInBasket;
-      
-      if (availableToAdd <= 0) {
-        return next(
-          new AppError(400, `محصول با حداکثر مقدار مجاز در سبد شما موجود است`)
-        );
-      }
-
-      return next(
-        new AppError(400, `حداکثر ${availableToAdd} عدد دیگر می‌توانید اضافه کنید`)
-      );
-    }
-    */
-
-    await basket.addItem(productId, count);
-
-    const updatedBasket = await Basket.findById(basket._id).populate("products.product");
-
-    res.status(200).json({
-      status: "success",
-      data: { basket: updatedBasket },
-      message: `${count} عدد محصول اضافه شد`,
-    });
-  } catch (error) {
-    console.error("DEBUG: Error in addToBasket:", error);
-
-    if (error.message.includes("Cannot add items to a basket that is not open")) {
-      return next(
-        new AppError(400, "نمی‌توان محصول به سبد اضافه کرد. سبد در حالت فعال نیست")
-      );
-    }
-
-    return next(new AppError(500, error.message || "خطا در افزودن محصول به سبد"));
   }
+
+  await basket.addItem(productId, count);
+  const updatedBasket = await Basket.findById(basket._id).populate("products.product");
+
+  res.status(200).json({
+    status: "success",
+    data: { basket: updatedBasket },
+    message: `${count} عدد محصول "${product.name}" به سبد اضافه شد`,
+  });
 };
 
-// Update basket item quantity
+// Update basket item quantity with proper validation
 const updateBasketItem = async (req, res, next) => {
   const { productId } = req.params;
   const { count } = req.body;
@@ -193,38 +153,37 @@ const updateBasketItem = async (req, res, next) => {
       });
     }
 
-    // Validate product exists
+    // FIXED: Validate product exists in database
     const product = await Product.findById(productId);
     if (!product) {
-      return next(new AppError(404, "محصول یافت نشد"));
+      console.log("DEBUG: Product not found in database:", productId);
+      return next(new AppError(404, "محصول در پایگاه داده یافت نشد"));
     }
 
-    console.log("DEBUG: Product found:", product.name, "- Stock:", product.quantity);
+    console.log("DEBUG: Product validation:", {
+      name: product.name,
+      currentStock: product.quantity,
+      requestedCount: count,
+    });
 
-    // Set reasonable limits
-    const MAX_QUANTITY_PER_ITEM = 100;
-    if (count > MAX_QUANTITY_PER_ITEM) {
+    // FIXED: Check inventory availability
+    if (count > product.quantity) {
       return next(
-        new AppError(400, `حداکثر ${MAX_QUANTITY_PER_ITEM} عدد برای هر محصول مجاز است`)
+        new AppError(
+          400,
+          `تنها ${product.quantity} عدد از محصول "${product.name}" در انبار موجود است`
+        )
       );
     }
 
-    // Optional: Uncomment for strict inventory checking
-    /*
-    if (count > product.quantity) {
-      return next(new AppError(400, `موجودی کافی نیست. حداکثر ${product.quantity} عدد موجود است`));
-    }
-    */
-
-    // Update the item count (will add if doesn't exist)
+    // Update the item count
     await basket.updateItemCount(productId, count);
-
     const updatedBasket = await Basket.findById(basket._id).populate("products.product");
 
     res.status(200).json({
       status: "success",
       data: { basket: updatedBasket },
-      message: `تعداد به ${count} به‌روزرسانی شد`,
+      message: `تعداد محصول "${product.name}" به ${count} به‌روزرسانی شد`,
     });
   } catch (error) {
     console.error("DEBUG: Error in updateBasketItem:", error);
@@ -311,7 +270,7 @@ const clearBasket = async (req, res, next) => {
   }
 };
 
-// Update basket status
+// FIXED: Update basket status with proper inventory reduction
 const updateBasketStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -340,42 +299,69 @@ const updateBasketStatus = async (req, res, next) => {
       status
     );
 
-    // If changing to finished, handle order completion
+    // FIXED: When changing to finished, reduce inventory properly
     if (status === "finished" && basket.status !== "finished") {
-      console.log("DEBUG: Processing order completion");
+      console.log("DEBUG: Processing order completion - reducing inventory...");
 
       if (basket.products.length === 0) {
         return next(new AppError(400, "نمی‌توان سبد خالی را تکمیل کرد"));
       }
 
-      // Optional: Reduce inventory when order is completed
-      /*
+      // First, validate all products exist and have sufficient stock
+      const inventoryValidation = [];
+
       for (const item of basket.products) {
-        const product = item.product;
-        const orderQuantity = item.count;
+        // Get fresh product data from database
+        const currentProduct = await Product.findById(item.product._id);
 
-        console.log(`DEBUG: Checking inventory for ${product.name}: Available: ${product.quantity}, Ordered: ${orderQuantity}`);
+        if (!currentProduct) {
+          return next(
+            new AppError(404, `محصول "${item.product.name}" در پایگاه داده یافت نشد`)
+          );
+        }
 
-        if (product.quantity < orderQuantity) {
-          return next(new AppError(400, `موجودی کافی برای ${product.name} نیست. موجود: ${product.quantity}, سفارش: ${orderQuantity}`));
+        if (currentProduct.quantity < item.count) {
+          return next(
+            new AppError(
+              400,
+              `موجودی کافی برای "${currentProduct.name}" نیست. موجود: ${currentProduct.quantity}, سفارش: ${item.count}`
+            )
+          );
+        }
+
+        inventoryValidation.push({
+          productId: currentProduct._id,
+          productName: currentProduct.name,
+          currentStock: currentProduct.quantity,
+          orderedQuantity: item.count,
+          newStock: currentProduct.quantity - item.count,
+        });
+      }
+
+      console.log("DEBUG: Inventory validation passed, updating stock...");
+
+      // Now reduce inventory for all products
+      for (const update of inventoryValidation) {
+        const updatedProduct = await Product.findByIdAndUpdate(
+          update.productId,
+          {
+            quantity: update.newStock,
+            updatedAt: new Date(),
+          },
+          { new: true }
+        );
+
+        console.log(
+          `DEBUG: Updated inventory for "${update.productName}": ${update.currentStock} → ${update.newStock}`
+        );
+
+        // Log if product is now out of stock
+        if (update.newStock === 0) {
+          console.log(`WARNING: Product "${update.productName}" is now out of stock`);
         }
       }
 
-      // Reduce inventory
-      for (const item of basket.products) {
-        const product = item.product;
-        const orderQuantity = item.count;
-        const newQuantity = Math.max(0, product.quantity - orderQuantity);
-
-        await Product.findByIdAndUpdate(product._id, {
-          quantity: newQuantity,
-        });
-
-        console.log(`DEBUG: Updated inventory for ${product.name}: ${product.quantity} → ${newQuantity}`);
-      }
-      */
-
-      console.log("DEBUG: Order completed successfully");
+      console.log("DEBUG: All inventory successfully reduced for completed order");
     }
 
     // Update the basket status
@@ -395,7 +381,7 @@ const updateBasketStatus = async (req, res, next) => {
     let message;
     switch (status) {
       case "finished":
-        message = "سفارش با موفقیت تکمیل شد!";
+        message = "سفارش با موفقیت تکمیل شد! موجودی محصولات به‌روزرسانی شده است";
         break;
       case "pending":
         message = "سبد در حالت انتظار پرداخت قرار گرفت";
@@ -513,7 +499,7 @@ const debugBasket = async (req, res, next) => {
     console.log("DEBUG: Debug endpoint called for user:", req.user._id);
 
     const allUserBaskets = await Basket.find({ user: req.user._id })
-      .populate("products.product", "name price")
+      .populate("products.product", "name price quantity")
       .sort({ createdAt: -1 });
 
     console.log("DEBUG: User has", allUserBaskets.length, "total baskets");
@@ -532,7 +518,8 @@ const debugBasket = async (req, res, next) => {
         products: basket.products.map((item) => ({
           productId: item.product._id,
           productName: item.product.name,
-          count: item.count,
+          productStock: item.product.quantity,
+          orderedCount: item.count,
           addedAt: item.addedAt,
         })),
       })),

@@ -1,4 +1,4 @@
-<!-- shop.ejs -->
+<!-- shop.ejs - Complete rewritten with wishlist and navigation fixes -->
 <!DOCTYPE html>
 <html lang="fa">
 
@@ -19,7 +19,7 @@
     <div class="left-side-header">
       <nav>
         <% if (user && user.role==='admin' ) { %>
-          <a id="admin-btn-page" href="/admin">مدیریت</a>
+          <a id="admin-btn-page" href="/admin-panel">مدیریت</a>
           <% } %>
       </nav>
 
@@ -63,7 +63,7 @@
       </li>
 
       <li>
-        <a href="#" class="user-profile-link">
+        <a href="/profile" class="user-profile-link">
           <i class="bx bx-user" id="user-icon"></i>
           <span class="links_name">کاربر</span>
         </a>
@@ -78,20 +78,31 @@
         <span class="tooltip">دسته‌بندی</span>
       </li>
 
+      <!-- FIXED: Orders button redirects to basket page -->
       <li>
-        <a href="#">
+        <a href="/basket">
           <i class="bx bx-cart-alt"></i>
           <span class="links_name">سفارشات</span>
         </a>
         <span class="tooltip">سفارشات</span>
       </li>
 
+      <!-- FIXED: Wishlist/Favorites button redirects to wishlist page -->
       <li>
-        <a href="#">
+        <a href="/wishlist">
           <i class="bx bx-heart"></i>
           <span class="links_name">علاقه‌مندی‌ها</span>
         </a>
         <span class="tooltip">علاقه‌مندی‌ها</span>
+      </li>
+
+      <!-- FIXED: Order history button -->
+      <li>
+        <a href="/order-history">
+          <i class="bx bx-history"></i>
+          <span class="links_name">تاریخچه سفارش</span>
+        </a>
+        <span class="tooltip">تاریخچه سفارش</span>
       </li>
 
       <li>

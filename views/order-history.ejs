@@ -1,0 +1,54 @@
+<!-- views/order-history.ejs -->
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تاریخچه سفارشات - فروشگاه فلان</title>
+  <link href="https://unpkg.com/boxicons@2.0.9/css/boxicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="/stylesheet/order-history.css" />
+</head>
+
+<body>
+  <!-- Header -->
+  <header>
+    <div class="right-side-header">
+      <h1>فروشگاه فلان</h1>
+    </div>
+    <div class="left-side-header">
+      <nav>
+        <a href="/shop">فروشگاه</a>
+        <a href="/wishlist">علاقه‌مندی‌ها</a>
+        <a href="/basket">سبد خرید</a>
+        <% if (user && user.role==='admin' ) { %>
+          <a href="/admin-panel">مدیریت</a>
+          <% } %>
+      </nav>
+
+      <div class="cart-wrapper">
+        <div class="cart-icon" id="cart-icon">🛒</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="order-history-container">
+    <div class="page-header">
+      <button onclick="goBackToShop()" class="back-btn">
+        <i class='bx bx-arrow-back'></i> بازگشت به فروشگاه
+      </button>
+      <h1>تاریخچه سفارشات</h1>
+      <p>مشاهده سفارشات قبلی شما</p>
+    </div>
+
+    <div id="order-history-content" class="loading">
+      <div class="spinner"></div>
+      <p>در حال بارگذاری تاریخچه سفارشات...</p>
+    </div>
+  </div>
+
+  <script type="module" src="/javascript/order-history.js"></script>
+</body>
+
+</html>
